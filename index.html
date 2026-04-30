@@ -17,7 +17,7 @@
   ║    position integer default 0,                                   ║
   ║    created_at timestamptz default now()                          ║
   ║  );                                                              ║
-  ║  create table ingenia_classes (                                  ║
+  ║  create table ingenia_classes (                               h   ║
   ║    id text primary key,                                          ║
   ║    module_id text references ingenia_modules(id) on delete cascade,║
   ║    num text, title text, description text,                       ║
@@ -374,8 +374,8 @@ body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-ser
 // ════════════════════════════════════════════════════════════════════
 // CONFIGURATION
 // ════════════════════════════════════════════════════════════════════
-let SUPABASE_URL = localStorage.getItem('ingenia_sb_url') || '';
-let SUPABASE_KEY = localStorage.getItem('ingenia_sb_key') || '';
+let SUPABASE_URL = localStorage.getItem('ingenia_sb_url') || 'https://whmdhyuqouwzxgyyfblr.supabase.co';
+let SUPABASE_KEY = localStorage.getItem('ingenia_sb_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobWRoeXVxb3V3enhneXlmYmxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MTAzNzgsImV4cCI6MjA5MzA4NjM3OH0.ZohcoQTfBzkJ3wY1potT64SpmRCKeN5UcQfS7ye-SKY';
 let sbClient = null;
 let sbConnected = false;
 
