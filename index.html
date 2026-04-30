@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║  IngenIA — Plan de Grabación  v3.0                              ║
+  ║  GitHub Pages + Supabase Ready                                  ║
+  ║                                                                  ║
+  ║  SETUP RÁPIDO:                                                   ║
+  ║  1. Sube este archivo a tu repo GitHub como index.html          ║
+  ║  2. Coloca logo.png en la raíz del repo                         ║
+  ║  3. Crea las tablas en Supabase (SQL abajo)                     ║
+  ║  4. Añade SUPABASE_URL y SUPABASE_KEY en el config panel        ║
+  ║                                                                  ║
+  ║  SQL PARA SUPABASE:                                              ║
+  ║  create table ingenia_modules (                                  ║
+  ║    id text primary key,                                          ║
+  ║    num text, color text, title text, sub text,                  ║
+  ║    position integer default 0,                                   ║
+  ║    created_at timestamptz default now()                          ║
+  ║  );                                                              ║
+  ║  create table ingenia_classes (                                  ║
+  ║    id text primary key,                                          ║
+  ║    module_id text references ingenia_modules(id) on delete cascade,║
+  ║    num text, title text, description text,                       ║
+  ║    duration text, status text default 'pendiente',              ║
+  ║    checked boolean default false,                                ║
+  ║    position integer default 0,                                   ║
+  ║    created_at timestamptz default now()                          ║
+  ║  );                                                              ║
+  ║  create table ingenia_notes (                                    ║
+  ║    id text primary key default 'global',                         ║
+  ║    content text default '',                                      ║
+  ║    updated_at timestamptz default now()                          ║
+  ║  );                                                              ║
+  ║  -- Enable RLS (opcional para uso personal):                     ║
+  ║  alter table ingenia_modules enable row level security;          ║
+  ║  alter table ingenia_classes enable row level security;          ║
+  ║  alter table ingenia_notes enable row level security;            ║
+  ║  -- Política abierta (ajusta según necesites):                   ║
+  ║  create policy "public_all" on ingenia_modules for all using (true) with check (true);║
+  ║  create policy "public_all" on ingenia_classes for all using (true) with check (true);║
+  ║  create policy "public_all" on ingenia_notes for all using (true) with check (true);  ║
+  ╚══════════════════════════════════════════════════════════════════╝
+-->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IngenIA — Plan de Grabación</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --bg:#0a0a0a; --bg2:#111111; --bg3:#1a1a1a; --bg4:#222222;
+  --border:#2a2a2a; --border2:#333333;
+  --c1:#00fb9c; --c2:#01a2cd; --c3:#6564e9;
+  --red:#e94560; --gold:#f5a623; --green:#22c55e;
+  --white:#ffffff; --gray:#888888; --gray2:#555555; --text:#e8e8e8;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;min-height:100vh;padding:0 0 80px;user-select:none;}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;gap:10px;flex-wrap:wrap;}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.logo-img{height:32px;width:auto;object-fit:contain;}
+.logo-fallback{height:32px;display:flex;align-items:center;gap:8px;}
+.logo-dot{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--c3),var(--c2));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;}
+.brand{font-size:16px;font-weight:700;color:var(--white);}
+.brand span{color:var(--c1);}
+.topbar-right{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+
+/* ── SYNC INDICATOR ── */
+.sync-badge{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid;transition:all 0.3s;}
+.sync-badge.local{background:rgba(245,166,35,.1);border-color:rgba(245,166,35,.3);color:var(--gold);}
+.sync-badge.synced{background:rgba(0,251,156,.1);border-color:rgba(0,251,156,.3);color:var(--c1);}
+.sync-badge.syncing{background:rgba(1,162,205,.1);border-color:rgba(1,162,205,.3);color:var(--c2);}
+.sync-badge.error{background:rgba(233,69,96,.1);border-color:rgba(233,69,96,.3);color:var(--red);}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+.sync-dot.pulse{animation:pulse 1.2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ── PROGRESS ── */
+.gp-wrap{display:flex;align-items:center;gap:9px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;}
+.gp-label{font-size:10px;color:var(--gray);font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+.gp-bar-wrap{width:80px;height:5px;background:var(--border2);border-radius:3px;overflow:hidden;}
+.gp-bar{height:100%;background:linear-gradient(90deg,var(--c3),var(--c2),var(--c1));border-radius:3px;transition:width 0.4s;}
+.gp-count{font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--c1);}
+
+/* ── BUTTONS ── */
+.btn{padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;border:none;cursor:pointer;font-family:'Space Grotesk',sans-serif;white-space:nowrap;transition:all 0.15s;}
+.btn-green{background:rgba(0,251,156,.1);border:1px solid rgba(0,251,156,.3);color:var(--c1);}
+.btn-green:hover{background:rgba(0,251,156,.2);}
+.btn-blue{background:rgba(1,162,205,.1);border:1px solid rgba(1,162,205,.3);color:var(--c2);}
+.btn-blue:hover{background:rgba(1,162,205,.2);}
+.btn-purple{background:rgba(101,100,233,.1);border:1px solid rgba(101,100,233,.3);color:var(--c3);}
+.btn-purple:hover{background:rgba(101,100,233,.2);}
+.btn-ghost{background:none;border:1px solid var(--border2);color:var(--gray2);}
+.btn-ghost:hover{border-color:var(--gray);color:var(--gray);}
+.btn-red{background:rgba(233,69,96,.1);border:1px solid rgba(233,69,96,.3);color:var(--red);}
+.btn-red:hover{background:rgba(233,69,96,.2);}
+.btn-gold{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.3);color:var(--gold);}
+.btn-gold:hover{background:rgba(245,166,35,.2);}
+
+/* ── BANNERS ── */
+.banner{display:none;padding:9px 24px;font-size:12px;align-items:center;gap:10px;}
+.banner-changes{background:rgba(245,166,35,.07);border-bottom:1px solid rgba(245,166,35,.25);color:var(--gold);}
+.banner-offline{background:rgba(233,69,96,.07);border-bottom:1px solid rgba(233,69,96,.25);color:var(--red);}
+.banner strong{font-weight:700;}
+.banner-close{margin-left:auto;background:none;border:none;color:currentColor;cursor:pointer;font-size:17px;line-height:1;opacity:0.7;}
+.banner-close:hover{opacity:1;}
+
+/* ── HERO ── */
+.hero{padding:32px 24px 20px;background:linear-gradient(180deg,#0f0f1a 0%,var(--bg) 100%);border-bottom:1px solid var(--border);}
+.hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.hero-title{font-size:28px;font-weight:700;color:var(--white);letter-spacing:-0.8px;margin-bottom:5px;}
+.hero-title span{background:linear-gradient(135deg,var(--c1),var(--c2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-sub{font-size:12.5px;color:var(--gray);max-width:480px;line-height:1.6;}
+.supabase-config-btn{padding:8px 14px;background:rgba(101,100,233,.12);border:1px solid rgba(101,100,233,.35);border-radius:8px;color:var(--c3);font-size:11.5px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.supabase-config-btn:hover{background:rgba(101,100,233,.22);}
+.supabase-config-btn .dot{width:8px;height:8px;border-radius:50%;background:var(--gold);}
+.supabase-config-btn .dot.connected{background:var(--c1);}
+
+/* ── STATS ── */
+.stats{display:flex;gap:8px;padding:14px 24px;flex-wrap:wrap;}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:11px 16px;display:flex;align-items:center;gap:10px;min-width:110px;}
+.stat-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.stat-num{font-size:19px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1;}
+.stat-lbl{font-size:9px;color:var(--gray);text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;}
+
+/* ── FILTERS + SEARCH ── */
+.toolbar{display:flex;gap:8px;padding:6px 24px 12px;flex-wrap:wrap;align-items:center;}
+.filter-btn{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border2);background:transparent;color:var(--gray);cursor:pointer;transition:all 0.2s;font-family:'Space Grotesk',sans-serif;}
+.filter-btn:hover,.filter-btn.active{border-color:var(--c2);color:var(--c2);background:rgba(1,162,205,.08);}
+.search-wrap{margin-left:auto;position:relative;}
+.search-input{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:11.5px;padding:5px 12px 5px 30px;outline:none;width:180px;transition:all 0.2s;}
+.search-input:focus{border-color:var(--c2);width:220px;}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gray2);font-size:12px;pointer-events:none;}
+
+/* ── CONTENT ── */
+.content{padding:0 24px;}
+
+/* ── MODULE ── */
+.module{margin-bottom:18px;border:1px solid var(--border);border-radius:14px;background:var(--bg2);transition:box-shadow 0.2s;overflow:visible;}
+.module.drag-over-mod{box-shadow:0 0 0 2px var(--c2);border-color:var(--c2);}
+.mod-header{padding:13px 16px;display:flex;align-items:center;gap:11px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.15s;border-radius:14px 14px 0 0;position:relative;}
+.module.collapsed .mod-header{border-bottom:none;border-radius:14px;}
+.mod-header:hover{background:rgba(255,255,255,.025);}
+.mod-handle{cursor:grab;color:var(--gray2);font-size:13px;padding:2px 4px;opacity:0.4;transition:opacity 0.15s;flex-shrink:0;}
+.mod-handle:hover{opacity:1;}
+.mod-badge{padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:0.5px;color:#fff;flex-shrink:0;font-family:'JetBrains Mono',monospace;}
+.mod-info{flex:1;min-width:0;}
+.mod-title-input{font-size:14px;font-weight:600;color:var(--white);background:transparent;border:none;outline:none;font-family:'Space Grotesk',sans-serif;width:100%;cursor:pointer;}
+.mod-title-input:focus{background:var(--bg3);border-radius:4px;padding:1px 5px;cursor:text;}
+.mod-sub{font-size:10px;color:var(--gray);margin-top:1px;}
+.mod-right{display:flex;align-items:center;gap:9px;margin-left:auto;flex-shrink:0;}
+.mod-actions{display:flex;gap:4px;opacity:0;transition:opacity 0.15s;}
+.mod-header:hover .mod-actions{opacity:1;}
+.mod-action-btn{background:none;border:1px solid transparent;color:var(--gray2);cursor:pointer;font-size:10.5px;padding:3px 7px;border-radius:5px;transition:all 0.15s;font-family:'Space Grotesk',sans-serif;white-space:nowrap;}
+.mod-action-btn:hover{border-color:var(--border2);color:var(--text);}
+.mod-action-btn.del:hover{border-color:rgba(233,69,96,.4);color:var(--red);}
+.mod-prog-bar{width:64px;height:3px;background:var(--border2);border-radius:2px;overflow:hidden;}
+.mod-prog-fill{height:100%;border-radius:2px;transition:width 0.4s;}
+.mod-prog-txt{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--gray);}
+.mod-chevron{color:var(--gray2);transition:transform 0.3s;font-size:13px;}
+.module.collapsed .mod-chevron{transform:rotate(-90deg);}
+.module.collapsed .classes-list{display:none;}
+
+/* ── CLASS ROW ── */
+.classes-list{padding:0;}
+.class-row{display:flex;align-items:flex-start;gap:9px;padding:11px 16px;border-bottom:1px solid var(--border);transition:background 0.1s;position:relative;cursor:default;}
+.class-row:last-of-type{border-bottom:none;}
+.class-row:hover{background:rgba(255,255,255,.018);}
+.class-row.dragging{opacity:0.35;background:var(--bg3);}
+.class-row.drag-over-top{box-shadow:inset 0 2px 0 var(--c2);}
+.class-row.drag-over-bottom{box-shadow:inset 0 -2px 0 var(--c2);}
+.class-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:0;}
+.class-row.s-grabada::before{background:var(--c1);}
+.class-row.s-urgente::before{background:var(--red);}
+.class-row.s-estrella::before{background:var(--gold);}
+.class-row.s-locacion::before{background:var(--c2);}
+.class-row.s-pendiente::before{background:var(--border2);}
+.class-row.s-skool::before{background:var(--c3);}
+.cls-handle{cursor:grab;color:var(--gray2);font-size:12px;opacity:0;transition:opacity 0.15s;flex-shrink:0;margin-top:2px;padding:0 2px;}
+.class-row:hover .cls-handle{opacity:1;}
+.cls-check{width:18px;height:18px;border-radius:5px;border:2px solid var(--border2);background:transparent;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.cls-check.checked{background:var(--c1);border-color:var(--c1);}
+.cls-check.checked::after{content:'✓';color:#000;font-size:10px;font-weight:700;}
+.cls-check:hover{border-color:var(--c1);}
+.cls-num{font-size:9.5px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--gray2);flex-shrink:0;margin-top:3px;width:20px;}
+.cls-body{flex:1;min-width:0;}
+.cls-title-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;}
+.cls-title{font-size:12.5px;font-weight:600;color:var(--white);background:transparent;border:none;outline:none;font-family:'Space Grotesk',sans-serif;cursor:text;flex:1;min-width:100px;padding:0;}
+.cls-title:focus{background:var(--bg3);border-radius:4px;padding:1px 6px;}
+.class-row.s-grabada .cls-title{color:var(--gray);text-decoration:line-through;text-decoration-color:var(--c1);text-decoration-thickness:1px;}
+.cls-desc{font-size:10.5px;color:var(--gray2);line-height:1.5;background:transparent;border:none;outline:none;font-family:'Space Grotesk',sans-serif;resize:none;width:100%;cursor:text;overflow:hidden;min-height:18px;}
+.cls-desc:focus{background:var(--bg3);border-radius:4px;padding:3px 6px;}
+.class-row.s-grabada .cls-desc{opacity:0.4;}
+.badge{padding:2px 7px;border-radius:12px;font-size:9.5px;font-weight:700;letter-spacing:0.3px;flex-shrink:0;white-space:nowrap;}
+.b-grabada{background:rgba(0,251,156,.1);color:var(--c1);border:1px solid rgba(0,251,156,.2);}
+.b-urgente{background:rgba(233,69,96,.1);color:var(--red);border:1px solid rgba(233,69,96,.2);}
+.b-estrella{background:rgba(245,166,35,.1);color:var(--gold);border:1px solid rgba(245,166,35,.2);}
+.b-locacion{background:rgba(1,162,205,.1);color:var(--c2);border:1px solid rgba(1,162,205,.2);}
+.b-pendiente{background:rgba(255,255,255,.04);color:var(--gray2);border:1px solid var(--border2);}
+.b-skool{background:rgba(101,100,233,.1);color:var(--c3);border:1px solid rgba(101,100,233,.2);}
+.cls-controls{display:flex;align-items:center;gap:5px;flex-shrink:0;margin-top:1px;flex-wrap:wrap;}
+.status-sel,.dur-input,.move-sel{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'Space Grotesk',sans-serif;padding:3px 6px;outline:none;cursor:pointer;font-size:10px;}
+.status-sel:focus,.dur-input:focus,.move-sel:focus{border-color:var(--c2);}
+.dur-input{width:62px;text-align:center;font-family:'JetBrains Mono',monospace;color:var(--gray);}
+.dur-input:focus{color:var(--text);}
+.move-sel{max-width:110px;color:var(--gray);}
+.cls-del{background:none;border:none;color:var(--gray2);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px;line-height:1;opacity:0;transition:all 0.15s;}
+.class-row:hover .cls-del{opacity:1;}
+.cls-del:hover{color:var(--red);background:rgba(233,69,96,.1);}
+.add-class-btn{display:flex;align-items:center;gap:7px;width:100%;padding:10px 16px;color:var(--gray2);font-size:11.5px;font-weight:600;cursor:pointer;border:none;background:none;font-family:'Space Grotesk',sans-serif;transition:color 0.15s;border-top:1px solid var(--border);}
+.add-class-btn::before{content:'+';font-size:15px;}
+.add-class-btn:hover{color:var(--c1);}
+
+/* ── ADD MODULE BAR ── */
+.add-module-bar{margin:6px 0 20px;border:1px dashed var(--border2);border-radius:12px;padding:13px;text-align:center;}
+.add-module-bar button{background:rgba(101,100,233,.1);border:1px solid rgba(101,100,233,.3);color:var(--c3);padding:7px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all 0.15s;}
+.add-module-bar button:hover{background:rgba(101,100,233,.2);}
+
+/* ── NOTES ── */
+.notes-section{margin:4px 0 0;padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;}
+.notes-title{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;}
+.notes-area{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:12px;padding:10px 12px;resize:vertical;min-height:65px;outline:none;line-height:1.6;transition:border-color 0.2s;}
+.notes-area:focus{border-color:var(--c2);}
+
+/* ── MODAL ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px;min-width:290px;max-width:480px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.6);}
+.modal h3{font-size:15px;font-weight:700;color:var(--white);margin-bottom:5px;}
+.modal p{font-size:11.5px;color:var(--gray);margin-bottom:14px;line-height:1.5;}
+.modal-field{margin-bottom:13px;}
+.modal-label{display:block;font-size:10.5px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;}
+.modal-input,.modal-select,.modal-textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:12.5px;padding:9px 11px;outline:none;transition:border-color 0.2s;}
+.modal-input:focus,.modal-select:focus,.modal-textarea:focus{border-color:var(--c2);}
+.modal-textarea{resize:vertical;min-height:55px;font-size:12px;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+.color-grid{display:flex;gap:7px;flex-wrap:wrap;margin-top:5px;}
+.color-swatch{width:26px;height:26px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:all 0.15s;}
+.color-swatch.selected{border-color:var(--white);transform:scale(1.15);}
+.modal-code{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--c1);overflow-x:auto;white-space:pre;margin-top:8px;}
+
+/* ── SUPABASE PANEL ── */
+.sb-panel{background:var(--bg2);border:1px solid rgba(101,100,233,.3);border-radius:14px;padding:20px;margin-bottom:18px;}
+.sb-panel h4{font-size:13px;font-weight:700;color:var(--c3);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.sb-panel p{font-size:11px;color:var(--gray);margin-bottom:14px;line-height:1.6;}
+.sb-row{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;}
+.sb-status{display:flex;align-items:center;gap:7px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;font-size:11.5px;margin-top:10px;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--c1);color:var(--c1);padding:9px 15px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transform:translateY(5px);transition:all 0.25s;pointer-events:none;z-index:999;max-width:280px;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.err{border-color:var(--red);color:var(--red);}
+.toast.warn{border-color:var(--gold);color:var(--gold);}
+
+/* ── EMPTY STATE ── */
+.empty-filter{padding:16px 16px;font-size:11.5px;color:var(--gray2);font-style:italic;}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+@media(max-width:600px){
+  .topbar{padding:10px 16px;}
+  .hero,.stats,.toolbar,.content{padding-left:16px;padding-right:16px;}
+  .gp-bar-wrap{width:60px;}
+  .hero-title{font-size:22px;}
+  .cls-controls{flex-wrap:wrap;}
+  .move-sel{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ── TOPBAR ── -->
+<div class="topbar">
+  <div class="topbar-left">
+    <img src="logo.png" class="logo-img" alt="IngenIA" onerror="this.style.display='none';document.getElementById('logo-fallback').style.display='flex'">
+    <div class="logo-fallback" id="logo-fallback" style="display:none">
+      <div class="logo-dot">IA</div>
+      <div class="brand">Ingen<span>IA</span></div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="sync-badge local" id="sync-badge">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-label">Local</span>
+    </div>
+    <div class="gp-wrap">
+      <span class="gp-label">Progreso</span>
+      <div class="gp-bar-wrap"><div class="gp-bar" id="gp-bar" style="width:0%"></div></div>
+      <span class="gp-count" id="gp-count">0/0</span>
+    </div>
+    <button class="btn btn-green" onclick="exportJSON()" title="Ctrl+S">💾 Exportar</button>
+    <label class="btn btn-blue" style="cursor:pointer" title="Importar backup JSON">
+      📂 Importar
+      <input type="file" accept=".json" onchange="importJSON(event)" style="display:none">
+    </label>
+    <button class="btn btn-purple" onclick="openAddModule()">＋ Módulo</button>
+    <button class="btn btn-ghost" onclick="confirmResetChecked()" title="Reinicia solo los checkmarks">↺</button>
+  </div>
+</div>
+
+<!-- ── BANNERS ── -->
+<div class="banner banner-changes" id="banner-changes">
+  <span>💡</span>
+  <span><strong id="changes-count">0</strong> cambios sin sincronizar con Supabase. <button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" onclick="pushToSupabase()">Subir ahora</button></span>
+  <button class="banner-close" onclick="document.getElementById('banner-changes').style.display='none'">×</button>
+</div>
+<div class="banner banner-offline" id="banner-offline">
+  <span>📵</span>
+  <span>Sin conexión — Los cambios se guardan <strong>localmente</strong> y se sincronizarán al reconectar.</span>
+  <button class="banner-close" onclick="document.getElementById('banner-offline').style.display='none'">×</button>
+</div>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-top">
+    <div>
+      <h1 class="hero-title">Plan de <span>Grabación</span></h1>
+      <p class="hero-sub">Marca clases · Arrastra para reordenar · Edita con clic · Sincroniza con Supabase desde cualquier dispositivo</p>
+    </div>
+    <button class="supabase-config-btn" onclick="openSupabaseConfig()">
+      <div class="dot" id="sb-indicator"></div>
+      ⚡ Supabase
+    </button>
+  </div>
+</div>
+
+<!-- ── STATS ── -->
+<div class="stats" id="stats-row"></div>
+
+<!-- ── FILTERS + SEARCH ── -->
+<div class="toolbar">
+  <button class="filter-btn active" onclick="setFilter('all',this)">Todas</button>
+  <button class="filter-btn" onclick="setFilter('grabada',this)">✅ Grabadas</button>
+  <button class="filter-btn" onclick="setFilter('urgente',this)">🔴 Urgentes</button>
+  <button class="filter-btn" onclick="setFilter('pendiente',this)">⏳ Pendientes</button>
+  <button class="filter-btn" onclick="setFilter('estrella',this)">⭐ Estrella</button>
+  <button class="filter-btn" onclick="setFilter('locacion',this)">📍 Locación</button>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="search-input" placeholder="Buscar clase..." oninput="render()" type="search">
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="content" id="main-content"></div>
+
+<!-- ── ADD MODULE ── -->
+<div class="content">
+  <div class="add-module-bar">
+    <button onclick="openAddModule()">＋ Añadir nuevo módulo</button>
+  </div>
+  <div class="notes-section">
+    <div class="notes-title">📝 Notas generales</div>
+    <textarea class="notes-area" id="global-notes" placeholder="Ideas, pendientes, recordatorios..." oninput="saveNotesLocal()"></textarea>
+  </div>
+</div>
+
+<!-- ── MODAL ── -->
+<div class="modal-backdrop" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-box"></div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+// CONFIGURATION
+// ════════════════════════════════════════════════════════════════════
+let SUPABASE_URL = localStorage.getItem('ingenia_sb_url') || '';
+let SUPABASE_KEY = localStorage.getItem('ingenia_sb_key') || '';
+let sbClient = null;
+let sbConnected = false;
+
+// ════════════════════════════════════════════════════════════════════
+// STATUS CONFIG
+// ════════════════════════════════════════════════════════════════════
+const STATUSES = {
+  grabada:  { label:'✅ Grabada',    cls:'b-grabada'  },
+  urgente:  { label:'🔴 Urgente',    cls:'b-urgente'  },
+  estrella: { label:'⭐ Estrella',   cls:'b-estrella' },
+  locacion: { label:'📍 Locación',   cls:'b-locacion' },
+  pendiente:{ label:'⏳ Pendiente',  cls:'b-pendiente'},
+  skool:    { label:'📌 Post Skool', cls:'b-skool'    },
+};
+
+const COLORS = [
+  '#1a5c3a','#8a1e1e','#1a3a6e','#5a1070','#a05010',
+  '#1e5a5a','#6e4a1a','#1a1e6e','#5a1040','#2a5a1a',
+  '#4a1a6e','#1a6e4a','#6e1a1a','#1a4a6e','#6e6a1a',
+];
+
+// ════════════════════════════════════════════════════════════════════
+// DEFAULT DATA (from JSON export 2026-04-30)
+// ════════════════════════════════════════════════════════════════════
+const DEFAULT_DATA = {
+  modules: [
+    { id:"m0", num:"0", color:"#1a5c3a", title:"Bienvenida", sub:"Visible para todos · Sin restricción · Nivel 1",
+      classes:[
+        { id:"m0c1", num:"C1", title:"Quién soy y por qué estoy aquí", desc:"Tu historia desde Foto Franco hasta hoy. 13 años, 14 países, proyectos reales. Por qué decidiste enseñar.", dur:"5 min", status:"grabada" },
+        { id:"m0c2", num:"C2", title:"Por qué la IA es el antes y el después", desc:"Inspiracional. Sin pantalla. Películas ficticias, apps sin suscripción. Quien no aprende hoy queda atrás.", dur:"3-4 min", status:"grabada" },
+        { id:"m0c3", num:"C3", title:"Análisis del Video Viral #1", desc:"Reproduces el video en pantalla. Pausas en momentos clave. Explicas efectos de sonido y ritmo visual.", dur:"6 min", status:"grabada" },
+        { id:"m0c4", num:"C4", title:"Análisis del Video Viral #2", desc:"Mismo formato. Diferente técnica. Terminas con: \"En el módulo siguiente te enseño cómo lo hice.\"", dur:"6 min", status:"grabada" },
+      ]
+    },
+    { id:"m1", num:"1", color:"#8a1e1e", title:"Tu Primer Video con IA", sub:"Requiere Nivel 2 · Fundamentos completos",
+      classes:[
+        { id:"m1c1", num:"C1", title:"Muestro los nodos y spaces de el video Viral", desc:"Abres Freepik desde cero. Construyes el flujo que usaste para el video \"clase\". Nodo por nodo. Prompts exactos.", dur:"12 min", status:"grabada" },
+        { id:"m1c6", num:"C2", title:"Los efectos de sonido que uso + pack descargable", desc:"Compartes el pack. Qué efecto va en qué momento. El pack se actualiza en la comunidad → retención.", dur:"6 min", status:"grabada" },
+        { id:"m1c7", num:"C3", title:"Los prompts que funcionan + PDF descargable", desc:"Los 3-4 más versátiles para empezar. PDF completo como recurso descargable.", dur:"7 min", status:"grabada" },
+        { id:"m1c3", num:"C4", title:"Qué fotografía necesitas y cómo tomarlas", desc:"Con dron o teléfono. Ángulos, altura, luz. Google Maps como alternativa si no hay dron.", dur:"5 min", status:"grabada" },
+        { id:"m1c2", num:"C5", title:"Freepik y Higgsfield: las plataformas que uso", desc:"Comparas ambas herramientas. Para qué sirve cada una, cuándo usas una y cuándo la otra.", dur:"8 min", status:"grabada" },
+        { id:"m1c4", num:"C6", title:"Cómo borrar el fondo — Método 1", desc:"Cómo poner la casa ya terminada detrás de ti. Mezclar contenido real con IA de forma básica.", dur:"6 min", status:"grabada" },
+        { id:"m1c5", num:"C7", title:"Cómo borrar el fondo — Método 2 (avanzado)", desc:"Herramienta diferente, hasta 14 segundos. Segunda forma de vincular contenido real con IA.", dur:"7 min", status:"grabada" },
+        { id:"m1c8", num:"C8", title:"🎬 CASO REAL: De la foto al video en un terreno", desc:"Parte 1 (exterior): dron, fotos reales. Parte 2 (pantalla): Photoshop → Freepik → resultado final con efectos de sonido.", dur:"20 min", status:"estrella" },
+      ]
+    },
+    { id:"m2", num:"2", color:"#1a3a6e", title:"Técnicas Específicas", sub:"Requiere Nivel 3 · Proyectos más avanzados",
+      classes:[
+        { id:"m2c5", num:"C1", title:"SketchUp como base para planos complejos", desc:"Modelado simple + texto descriptivo = resultado preciso con la IA.", dur:"8 min", status:"urgente" },
+        { id:"m2c4", num:"C2", title:"Consistencia visual, cómo lograrla?", desc:"Mismo estilo, paleta, movimiento y ritmo en todos los videos. Separa al profesional del amateur.", dur:"8 min", status:"urgente" },
+        { id:"m2c3", num:"C3", title:"Cuándo y cómo usar Photoshop como puente", desc:"Lo que la IA no interpreta bien sola. Preparar la imagen para que la IA entienda perfectamente.", dur:"8 min", status:"urgente" },
+        { id:"m2c2", num:"C4", title:"Demarcación de terrenos y trazado de planos", desc:"Líneas, límites, distribución de lotes. Muy solicitado por constructoras e inmobiliarias.", dur:"8 min", status:"grabada" },
+      ]
+    },
+    { id:"m3", num:"3", color:"#5a1070", title:"Nivel Profesional", sub:"Días 31+ o Nivel 4 · Para quienes venden el servicio",
+      classes:[
+        { id:"m3c1", num:"C1", title:"Workflow en campo — Análisis de lo que hice", desc:"Tú con tu pareja grabando. Cómo haces las fotos del dron, qué buscas visualmente antes de disparar.", dur:"10 min", status:"locacion" },
+        { id:"m3c2", num:"C2", title:"Photoshop: la nueva función de rotación de planos", desc:"Para proyectos arquitectónicos avanzados. Alto valor para estudios de arquitectura.", dur:"8 min", status:"pendiente" },
+        { id:"m3_c1777514544083", num:"C3", title:"WorkFlow - Empezando a Construir mi Próximo Video", desc:"Empiezo a comentar qué pienso hacer, qué pienso crear y cómo lo pienso hacer qué programas voy a usar.", dur:"10 min", status:"urgente" },
+      ]
+    },
+  ],
+  checked: {
+    "m0c1":true,"m0c2":true,"m0c3":true,"m0c4":true,
+    "m1c1":true,"m1c2":true,"m1c3":true,"m1c4":true,"m1c5":true,"m1c6":true,"m1c7":true,
+    "m2c2":true,
+    "m3c1":false
+  },
+  notes: ""
+};
+
+// ════════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════════
+let modules  = [];
+let checked  = {};
+let notes    = '';
+let filter   = 'all';
+let collapsed= {};
+let pendingChanges = 0;
+let toastTimer;
+let dragData = null;
+
+// ════════════════════════════════════════════════════════════════════
+// SUPABASE
+// ════════════════════════════════════════════════════════════════════
+function initSupabase() {
+  if (!SUPABASE_URL || !SUPABASE_KEY) { setSyncStatus('local'); return; }
+  try {
+    sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    sbConnected = true;
+    setSyncStatus('synced');
+    document.querySelector('#sb-indicator').classList.add('connected');
+    document.getElementById('banner-offline').style.display = 'none';
+  } catch(e) {
+    sbConnected = false;
+    setSyncStatus('error');
+  }
+}
+
+function setSyncStatus(status) {
+  const badge = document.getElementById('sync-badge');
+  const dot   = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  badge.className = 'sync-badge ' + status;
+  dot.className   = 'sync-dot' + (status === 'syncing' ? ' pulse' : '');
+  const labels = { local:'Local', synced:'Sincronizado', syncing:'Sincronizando...', error:'Error Supabase' };
+  label.textContent = labels[status] || status;
+}
+
+async function pushToSupabase() {
+  if (!sbClient) { toast('⚠ Configura Supabase primero', true); return; }
+  setSyncStatus('syncing');
+  try {
+    // Upsert modules
+    const modRows = modules.map((m, i) => ({ id:m.id, num:m.num, color:m.color, title:m.title, sub:m.sub, position:i }));
+    await sbClient.from('ingenia_modules').upsert(modRows, { onConflict:'id' });
+
+    // Upsert classes
+    const clsRows = [];
+    modules.forEach(m => m.classes.forEach((c, i) => {
+      clsRows.push({ id:c.id, module_id:m.id, num:c.num, title:c.title, description:c.desc||'', duration:c.dur||'', status:c.status, checked:!!checked[c.id], position:i });
+    }));
+    await sbClient.from('ingenia_classes').upsert(clsRows, { onConflict:'id' });
+
+    // Upsert notes
+    await sbClient.from('ingenia_notes').upsert([{ id:'global', content:notes }], { onConflict:'id' });
+
+    pendingChanges = 0;
+    document.getElementById('banner-changes').style.display = 'none';
+    setSyncStatus('synced');
+    toast('☁ Sincronizado con Supabase');
+  } catch(e) {
+    setSyncStatus('error');
+    toast('❌ Error al sincronizar: ' + e.message, true);
+  }
+}
+
+async function pullFromSupabase() {
+  if (!sbClient) return;
+  setSyncStatus('syncing');
+  try {
+    const { data: mods }  = await sbClient.from('ingenia_modules').select('*').order('position');
+    const { data: clss }  = await sbClient.from('ingenia_classes').select('*').order('position');
+    const { data: nts }   = await sbClient.from('ingenia_notes').select('*').eq('id','global');
+
+    if (!mods || mods.length === 0) {
+      setSyncStatus('synced');
+      toast('ℹ Supabase vacío — cargando datos locales');
+      return;
+    }
+
+    modules = mods.map(m => ({
+      id:m.id, num:m.num, color:m.color, title:m.title, sub:m.sub||'',
+      classes: clss.filter(c => c.module_id === m.id).map(c => ({
+        id:c.id, num:c.num, title:c.title, desc:c.description||'', dur:c.duration||'', status:c.status
+      }))
+    }));
+    checked = {};
+    clss.forEach(c => { if (c.checked) checked[c.id] = true; });
+    notes = nts?.[0]?.content || '';
+    document.getElementById('global-notes').value = notes;
+    saveLocal();
+    render();
+    setSyncStatus('synced');
+    toast('☁ Datos cargados desde Supabase');
+  } catch(e) {
+    setSyncStatus('error');
+    toast('❌ Error al cargar: ' + e.message, true);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// LOCAL STORAGE
+// ════════════════════════════════════════════════════════════════════
+function saveLocal() {
+  localStorage.setItem('ingenia_v3_modules', JSON.stringify(modules));
+  localStorage.setItem('ingenia_v3_checked', JSON.stringify(checked));
+  localStorage.setItem('ingenia_notes', notes);
+}
+
+function markChanged() {
+  saveLocal();
+  pendingChanges++;
+  document.getElementById('changes-count').textContent = pendingChanges;
+  if (pendingChanges >= 3 && sbConnected) {
+    document.getElementById('banner-changes').style.display = 'flex';
+  }
+  // Auto-sync if connected
+  if (sbConnected) {
+    clearTimeout(window._syncTimer);
+    window._syncTimer = setTimeout(pushToSupabase, 4000);
+  }
+}
+
+function saveNotesLocal() {
+  notes = document.getElementById('global-notes').value;
+  markChanged();
+}
+
+function loadLocal() {
+  const m  = localStorage.getItem('ingenia_v3_modules');
+  const ch = localStorage.getItem('ingenia_v3_checked');
+  const nt = localStorage.getItem('ingenia_notes');
+  if (m) { try { modules = JSON.parse(m); } catch(e) { modules = JSON.parse(JSON.stringify(DEFAULT_DATA.modules)); } }
+  else modules = JSON.parse(JSON.stringify(DEFAULT_DATA.modules));
+  if (ch) { try { checked = JSON.parse(ch); } catch(e) { checked = Object.assign({}, DEFAULT_DATA.checked); } }
+  else checked = Object.assign({}, DEFAULT_DATA.checked);
+  notes = nt || DEFAULT_DATA.notes || '';
+}
+
+// ════════════════════════════════════════════════════════════════════
+// IMPORT / EXPORT
+// ════════════════════════════════════════════════════════════════════
+function exportJSON() {
+  const data = { version:3, date:new Date().toISOString(), label:'IngenIA — Plan de Grabación', modules, checked, notes };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `IngenIA_progreso_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('💾 JSON exportado');
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      const dateStr = d.date ? new Date(d.date).toLocaleDateString('es-CO') : 'desconocida';
+      if (!confirm(`¿Restaurar progreso del ${dateStr}? Se reemplazará el estado actual.`)) return;
+      if (d.modules) modules = d.modules;
+      if (d.checked) checked = d.checked;
+      if (d.notes != null) { notes = d.notes; document.getElementById('global-notes').value = notes; }
+      saveLocal();
+      render();
+      toast('📂 Progreso restaurado');
+    } catch(err) { toast('❌ Archivo inválido', true); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUPABASE CONFIG MODAL
+// ════════════════════════════════════════════════════════════════════
+function openSupabaseConfig() {
+  openModal(`
+    <h3>⚡ Configurar Supabase</h3>
+    <p>Conecta con tu base de datos para sincronizar desde cualquier dispositivo. Los datos se guardan siempre localmente como respaldo.</p>
+    <div class="modal-field">
+      <label class="modal-label">Supabase Project URL</label>
+      <input class="modal-input" id="sb-url" placeholder="https://xxxx.supabase.co" value="${SUPABASE_URL}">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Supabase Anon Key</label>
+      <input class="modal-input" id="sb-key" placeholder="eyJhbGciOiJIUzI1..." value="${SUPABASE_KEY}" type="password">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">SQL para crear las tablas</label>
+      <div class="modal-code">create table ingenia_modules (
+  id text primary key,
+  num text, color text, title text, sub text,
+  position integer default 0,
+  created_at timestamptz default now()
+);
+
+create table ingenia_classes (
+  id text primary key,
+  module_id text references ingenia_modules(id) on delete cascade,
+  num text, title text, description text,
+  duration text, status text default 'pendiente',
+  checked boolean default false,
+  position integer default 0,
+  created_at timestamptz default now()
+);
+
+create table ingenia_notes (
+  id text primary key default 'global',
+  content text default '',
+  updated_at timestamptz default now()
+);</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-blue" onclick="sbPull()">☁ Cargar desde Supabase</button>
+      <button class="btn btn-purple" onclick="sbSave()">💾 Guardar y Conectar</button>
+    </div>
+  `);
+}
+
+function sbSave() {
+  SUPABASE_URL = document.getElementById('sb-url').value.trim();
+  SUPABASE_KEY = document.getElementById('sb-key').value.trim();
+  localStorage.setItem('ingenia_sb_url', SUPABASE_URL);
+  localStorage.setItem('ingenia_sb_key', SUPABASE_KEY);
+  initSupabase();
+  closeModal();
+  toast('✅ Supabase configurado');
+}
+
+function sbPull() {
+  SUPABASE_URL = document.getElementById('sb-url').value.trim();
+  SUPABASE_KEY = document.getElementById('sb-key').value.trim();
+  localStorage.setItem('ingenia_sb_url', SUPABASE_URL);
+  localStorage.setItem('ingenia_sb_key', SUPABASE_KEY);
+  initSupabase();
+  closeModal();
+  pullFromSupabase();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE ACTIONS
+// ════════════════════════════════════════════════════════════════════
+function openAddModule() {
+  const swatches = COLORS.map((c,i) =>
+    `<div class="color-swatch${i===0?' selected':''}" style="background:${c}" data-color="${c}" onclick="pickColor(this)"></div>`
+  ).join('');
+  openModal(`
+    <h3>➕ Nuevo Módulo</h3>
+    <div class="modal-field">
+      <label class="modal-label">Número / ID visual</label>
+      <input class="modal-input" id="m-num" placeholder="ej: 4, Extra, Bonus">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Título del módulo</label>
+      <input class="modal-input" id="m-title" placeholder="ej: Casos de Estudio con Clientes">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Subtítulo</label>
+      <input class="modal-input" id="m-sub" placeholder="ej: Requiere Nivel 4 · Contenido avanzado">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Color del badge</label>
+      <div class="color-grid">${swatches}</div>
+      <input type="hidden" id="m-color" value="${COLORS[0]}">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-purple" onclick="confirmAddModule()">Crear módulo</button>
+    </div>
+  `);
+}
+
+function pickColor(el) {
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('m-color').value = el.dataset.color;
+}
+
+function confirmAddModule() {
+  const num   = document.getElementById('m-num').value.trim();
+  const title = document.getElementById('m-title').value.trim();
+  const sub   = document.getElementById('m-sub').value.trim();
+  const color = document.getElementById('m-color').value;
+  if (!title) { toast('❌ El título es obligatorio', true); return; }
+  modules.push({ id:'m_'+Date.now(), num:num||String(modules.length), color, title, sub:sub||'Nuevo módulo', classes:[] });
+  markChanged(); render(); closeModal();
+  toast('✅ Módulo creado');
+}
+
+function deleteModule(id) {
+  const mod = modules.find(m => m.id === id);
+  if (!mod) return;
+  openModal(`
+    <h3>🗑 Eliminar módulo</h3>
+    <p>¿Eliminar <strong style="color:var(--white)">${mod.title}</strong> con sus <strong style="color:var(--red)">${mod.classes.length} clases</strong>? No se puede deshacer.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-red" onclick="confirmDeleteModule('${id}')">Sí, eliminar todo</button>
+    </div>
+  `);
+}
+
+function confirmDeleteModule(id) {
+  modules = modules.filter(m => m.id !== id);
+  markChanged(); render(); closeModal();
+  toast('🗑 Módulo eliminado');
+}
+
+function updateModTitle(id, val) {
+  const m = modules.find(m => m.id === id);
+  if (m) { m.title = val; markChanged(); }
+}
+
+function updateModSub(id, val) {
+  const m = modules.find(m => m.id === id);
+  if (m) { m.sub = val; markChanged(); }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// CLASS ACTIONS
+// ════════════════════════════════════════════════════════════════════
+function openAddClass(modId) {
+  const modOpts = modules.map(m => `<option value="${m.id}"${m.id===modId?' selected':''}>${m.num} — ${m.title}</option>`).join('');
+  const stOpts  = Object.entries(STATUSES).map(([k,v]) => `<option value="${k}"${k==='pendiente'?' selected':''}>${v.label}</option>`).join('');
+  openModal(`
+    <h3>➕ Nueva Clase</h3>
+    <div class="modal-field">
+      <label class="modal-label">Módulo destino</label>
+      <select class="modal-select" id="c-mod">${modOpts}</select>
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Título de la clase</label>
+      <input class="modal-input" id="c-title" placeholder="ej: Intro a Kling AI 2.5">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Descripción</label>
+      <textarea class="modal-textarea" id="c-desc" placeholder="Qué cubre esta clase..."></textarea>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <div class="modal-field" style="flex:1">
+        <label class="modal-label">Duración estimada</label>
+        <input class="modal-input" id="c-dur" placeholder="ej: 8 min">
+      </div>
+      <div class="modal-field" style="flex:1">
+        <label class="modal-label">Estado inicial</label>
+        <select class="modal-select" id="c-status">${stOpts}</select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" onclick="confirmAddClass()">Añadir clase</button>
+    </div>
+  `);
+}
+
+function confirmAddClass() {
+  const modId  = document.getElementById('c-mod').value;
+  const title  = document.getElementById('c-title').value.trim();
+  const desc   = document.getElementById('c-desc').value.trim();
+  const dur    = document.getElementById('c-dur').value.trim() || '— min';
+  const status = document.getElementById('c-status').value;
+  if (!title) { toast('❌ El título es obligatorio', true); return; }
+  const mod = modules.find(m => m.id === modId);
+  if (!mod) return;
+  mod.classes.push({ id: modId+'_c'+Date.now(), num:'C'+(mod.classes.length+1), title, desc, dur, status });
+  markChanged(); render(); closeModal();
+  toast('✅ Clase añadida');
+}
+
+function deleteClass(modId, classId) {
+  const cls = modules.find(m=>m.id===modId)?.classes.find(c=>c.id===classId);
+  if (!cls) return;
+  openModal(`
+    <h3>🗑 Eliminar clase</h3>
+    <p>¿Eliminar <strong style="color:var(--white)">${cls.title}</strong>?</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-red" onclick="confirmDeleteClass('${modId}','${classId}')">Sí, eliminar</button>
+    </div>
+  `);
+}
+
+function confirmDeleteClass(modId, classId) {
+  const mod = modules.find(m => m.id === modId);
+  if (!mod) return;
+  mod.classes = mod.classes.filter(c => c.id !== classId);
+  delete checked[classId];
+  markChanged(); render(); closeModal();
+  toast('🗑 Clase eliminada');
+}
+
+function toggleCheck(classId) {
+  checked[classId] = !checked[classId];
+  markChanged(); render();
+  toast(checked[classId] ? '✅ Grabada' : '↩ Desmarcada');
+}
+
+function updateField(modId, classId, field, val) {
+  const cls = modules.find(m=>m.id===modId)?.classes.find(c=>c.id===classId);
+  if (!cls) return;
+  cls[field] = val;
+  markChanged();
+  if (field === 'status') render();
+}
+
+function moveClass(fromModId, classId, toModId) {
+  if (fromModId === toModId) return;
+  const from = modules.find(m=>m.id===fromModId);
+  const to   = modules.find(m=>m.id===toModId);
+  if (!from||!to) return;
+  const cls = from.classes.find(c=>c.id===classId);
+  if (!cls) return;
+  from.classes = from.classes.filter(c=>c.id!==classId);
+  to.classes.push(cls);
+  markChanged(); render();
+  toast(`📦 Movida a ${to.title}`);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// DRAG & DROP
+// ════════════════════════════════════════════════════════════════════
+function onClassDragStart(e, modId, classId) {
+  dragData = { modId, classId };
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', classId);
+  setTimeout(() => document.getElementById('row-'+classId)?.classList.add('dragging'), 0);
+}
+
+function onClassDragEnd(e, classId) {
+  document.querySelectorAll('.class-row').forEach(r => r.classList.remove('dragging','drag-over-top','drag-over-bottom'));
+  document.querySelectorAll('.module').forEach(m => m.classList.remove('drag-over-mod'));
+  dragData = null;
+}
+
+function onClassDragOver(e, modId, classId) {
+  if (!dragData) return;
+  e.preventDefault();
+  document.querySelectorAll('.class-row').forEach(r => r.classList.remove('drag-over-top','drag-over-bottom'));
+  const rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.classList.add(e.clientY < rect.top + rect.height/2 ? 'drag-over-top' : 'drag-over-bottom');
+}
+
+function onClassDrop(e, toModId, targetId) {
+  e.preventDefault();
+  if (!dragData) return;
+  document.querySelectorAll('.class-row').forEach(r => r.classList.remove('drag-over-top','drag-over-bottom'));
+  const { modId: fromModId, classId } = dragData;
+  if (classId === targetId) return;
+  const from = modules.find(m=>m.id===fromModId);
+  const to   = modules.find(m=>m.id===toModId);
+  if (!from||!to) return;
+  const cls = from.classes.find(c=>c.id===classId);
+  if (!cls) return;
+  from.classes = from.classes.filter(c=>c.id!==classId);
+  const tIdx = to.classes.findIndex(c=>c.id===targetId);
+  const rect = document.getElementById('row-'+targetId)?.getBoundingClientRect();
+  const after = rect && e.clientY > rect.top + rect.height/2;
+  to.classes.splice(after ? tIdx+1 : tIdx, 0, cls);
+  markChanged(); render();
+  toast(fromModId===toModId ? '↕ Reordenada' : `📦 Movida a ${to.title}`);
+}
+
+function onModDragOver(e, modId) {
+  if (!dragData) return; e.preventDefault();
+  document.querySelectorAll('.module').forEach(m=>m.classList.remove('drag-over-mod'));
+  document.getElementById('mod-'+modId)?.classList.add('drag-over-mod');
+}
+
+function onModDrop(e, toModId) {
+  e.preventDefault();
+  document.querySelectorAll('.module').forEach(m=>m.classList.remove('drag-over-mod'));
+  if (!dragData) return;
+  const { modId: fromModId, classId } = dragData;
+  if (fromModId === toModId) return;
+  moveClass(fromModId, classId, toModId);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// UI HELPERS
+// ════════════════════════════════════════════════════════════════════
+function toggleCollapse(id) {
+  collapsed[id] = !collapsed[id]; render();
+}
+
+function setFilter(f, btn) {
+  filter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); render();
+}
+
+function openModal(html) {
+  document.getElementById('modal-box').innerHTML = html;
+  document.getElementById('modal').style.display = 'flex';
+  setTimeout(()=>{ const f=document.querySelector('#modal-box input,#modal-box textarea,#modal-box select'); if(f)f.focus(); },50);
+}
+
+function closeModal() { document.getElementById('modal').style.display='none'; }
+
+let toastT;
+function toast(msg, err=false, warn=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (err?' err':warn?' warn':'');
+  clearTimeout(toastT);
+  toastT = setTimeout(()=>el.classList.remove('show'), 2600);
+}
+
+function confirmResetChecked() {
+  if (!confirm('¿Reiniciar solo los checkmarks? Los módulos y clases se conservan.')) return;
+  checked = {};
+  markChanged(); render();
+  toast('↺ Checkmarks reiniciados');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// STATS
+// ════════════════════════════════════════════════════════════════════
+function updateStats() {
+  let total=0,done=0,urg=0,pend=0,loc=0,star=0;
+  modules.forEach(m=>m.classes.forEach(c=>{
+    total++;
+    if(checked[c.id]) done++;
+    if(c.status==='urgente') urg++;
+    if(['pendiente','urgente'].includes(c.status)) pend++;
+    if(c.status==='locacion') loc++;
+    if(c.status==='estrella') star++;
+  }));
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('gp-bar').style.width = pct+'%';
+  document.getElementById('gp-count').textContent = `${done}/${total}`;
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat"><div class="stat-icon" style="background:rgba(0,251,156,.1)">✅</div><div><div class="stat-num" style="color:var(--c1)">${done}</div><div class="stat-lbl">Grabadas</div></div></div>
+    <div class="stat"><div class="stat-icon" style="background:rgba(255,255,255,.05)">📋</div><div><div class="stat-num" style="color:var(--white)">${total}</div><div class="stat-lbl">Total</div></div></div>
+    <div class="stat"><div class="stat-icon" style="background:rgba(233,69,96,.1)">🔴</div><div><div class="stat-num" style="color:var(--red)">${urg}</div><div class="stat-lbl">Urgentes</div></div></div>
+    <div class="stat"><div class="stat-icon" style="background:rgba(245,166,35,.1)">⏳</div><div><div class="stat-num" style="color:var(--gold)">${pend}</div><div class="stat-lbl">Pendientes</div></div></div>
+    <div class="stat"><div class="stat-icon" style="background:rgba(245,166,35,.1)">⭐</div><div><div class="stat-num" style="color:var(--gold)">${star}</div><div class="stat-lbl">Estrellas</div></div></div>
+    <div class="stat"><div class="stat-icon" style="background:rgba(101,100,233,.1)">📊</div><div><div class="stat-num" style="color:var(--c3)">${pct}%</div><div class="stat-lbl">Completado</div></div></div>
+  `;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════════════════════════════
+function render() {
+  const container = document.getElementById('main-content');
+  const query = (document.getElementById('search-input')?.value||'').toLowerCase().trim();
+  container.innerHTML = '';
+
+  modules.forEach(mod => {
+    let classes = mod.classes;
+    // Apply filter
+    if (filter !== 'all') classes = classes.filter(c => c.status === filter);
+    // Apply search
+    if (query) classes = classes.filter(c =>
+      c.title.toLowerCase().includes(query) || (c.desc||'').toLowerCase().includes(query)
+    );
+
+    const total = mod.classes.length;
+    const done  = mod.classes.filter(c=>checked[c.id]).length;
+    const pct   = total ? Math.round(done/total*100) : 0;
+    const isCollapsed = !!collapsed[mod.id];
+    const otherMods   = modules.filter(m=>m.id!==mod.id);
+
+    const el = document.createElement('div');
+    el.className = 'module' + (isCollapsed ? ' collapsed' : '');
+    el.id = 'mod-' + mod.id;
+    el.addEventListener('dragover', e => onModDragOver(e, mod.id));
+    el.addEventListener('drop',     e => onModDrop(e, mod.id));
+
+    el.innerHTML = `
+      <div class="mod-header" onclick="toggleCollapse('${mod.id}')">
+        <span class="mod-handle" onclick="event.stopPropagation()" title="Arrastra el módulo">⠿</span>
+        <div class="mod-badge" style="background:${mod.color}">${mod.num}</div>
+        <div class="mod-info">
+          <input class="mod-title-input" value="${escHtml(mod.title)}"
+            onclick="event.stopPropagation()" onchange="updateModTitle('${mod.id}',this.value)" oninput="event.stopPropagation()">
+          <div class="mod-sub">${escHtml(mod.sub)}</div>
+        </div>
+        <div class="mod-right">
+          <div class="mod-actions" onclick="event.stopPropagation()">
+            <button class="mod-action-btn" onclick="openAddClass('${mod.id}')">＋ Clase</button>
+            <button class="mod-action-btn del" onclick="deleteModule('${mod.id}')">🗑</button>
+          </div>
+          <div class="mod-prog-bar"><div class="mod-prog-fill" style="width:${pct}%;background:${mod.color}"></div></div>
+          <span class="mod-prog-txt">${done}/${total}</span>
+          <span class="mod-chevron">▾</span>
+        </div>
+      </div>
+    `;
+
+    const list = document.createElement('div');
+    list.className = 'classes-list';
+
+    if (classes.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-filter';
+      empty.textContent = query ? 'Ninguna clase coincide con la búsqueda.' : 'No hay clases con este filtro.';
+      list.appendChild(empty);
+    } else {
+      classes.forEach(cls => {
+        const isChk = !!checked[cls.id];
+        const st    = STATUSES[cls.status] || STATUSES.pendiente;
+        const moveSel = otherMods.length ? `
+          <select class="move-sel" onchange="moveClass('${mod.id}','${cls.id}',this.value);this.value=''" title="Mover a otro módulo">
+            <option value="">↗ Mover a...</option>
+            ${otherMods.map(m=>`<option value="${m.id}">${m.num} — ${escHtml(m.title)}</option>`).join('')}
+          </select>` : '';
+
+        const row = document.createElement('div');
+        row.className = `class-row s-${cls.status}`;
+        row.id = 'row-' + cls.id;
+        row.setAttribute('draggable','true');
+        row.addEventListener('dragstart', e => onClassDragStart(e, mod.id, cls.id));
+        row.addEventListener('dragend',   e => onClassDragEnd(e, cls.id));
+        row.addEventListener('dragover',  e => onClassDragOver(e, mod.id, cls.id));
+        row.addEventListener('drop',      e => onClassDrop(e, mod.id, cls.id));
+
+        row.innerHTML = `
+          <span class="cls-handle" title="Arrastra para reordenar">⠿</span>
+          <div class="cls-check${isChk?' checked':''}" onclick="toggleCheck('${cls.id}')"></div>
+          <div class="cls-num">${escHtml(cls.num)}</div>
+          <div class="cls-body">
+            <div class="cls-title-row">
+              <input class="cls-title" value="${escHtml(cls.title)}" draggable="false"
+                onchange="updateField('${mod.id}','${cls.id}','title',this.value)" onclick="event.stopPropagation()">
+              <span class="badge ${st.cls}">${st.label}</span>
+            </div>
+            <textarea class="cls-desc" rows="2" draggable="false"
+              onchange="updateField('${mod.id}','${cls.id}','desc',this.value)"
+              onclick="event.stopPropagation()">${escHtml(cls.desc||'')}</textarea>
+          </div>
+          <div class="cls-controls">
+            <select class="status-sel" onchange="updateField('${mod.id}','${cls.id}','status',this.value)">
+              ${Object.entries(STATUSES).map(([k,v])=>`<option value="${k}"${cls.status===k?' selected':''}>${v.label}</option>`).join('')}
+            </select>
+            <input class="dur-input" value="${escHtml(cls.dur||'')}" title="Duración" draggable="false"
+              onchange="updateField('${mod.id}','${cls.id}','dur',this.value)">
+            ${moveSel}
+            <button class="cls-del" title="Eliminar clase" onclick="deleteClass('${mod.id}','${cls.id}')">🗑</button>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    // Add class button
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-class-btn';
+    addBtn.textContent = ' Añadir clase';
+    addBtn.onclick = () => openAddClass(mod.id);
+    list.appendChild(addBtn);
+
+    el.appendChild(list);
+    container.appendChild(el);
+  });
+
+  updateStats();
+}
+
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ════════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if ((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); exportJSON(); }
+  if ((e.ctrlKey||e.metaKey) && e.key==='k') {
+    e.preventDefault();
+    const si = document.getElementById('search-input');
+    if (si) { si.focus(); si.select(); }
+  }
+});
+
+// Warn before close if pending changes
+window.addEventListener('beforeunload', e => {
+  if (pendingChanges > 0 && !sbConnected) {
+    e.preventDefault();
+    e.returnValue = 'Tienes cambios sin exportar. ¿Salir de todas formas?';
+  }
+});
+
+// Offline detection
+window.addEventListener('online',  () => { document.getElementById('banner-offline').style.display='none'; if(sbConnected) pushToSupabase(); });
+window.addEventListener('offline', () => { document.getElementById('banner-offline').style.display='flex'; });
+
+// ════════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════════
+loadLocal();
+document.getElementById('global-notes').value = notes;
+initSupabase();
+render();
+if (!navigator.onLine) document.getElementById('banner-offline').style.display = 'flex';
+</script>
+</body>
+</html>
