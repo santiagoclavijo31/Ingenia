@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
-  IngenIA — Plan de Grabación  v4.0
-  ═══════════════════════════════════════════════════════════
-  SQL SUPABASE (ejecuta en SQL Editor de tu proyecto):
+  IngenIA — Plan de Grabación  v4.1
+  ══════════════════════════════════════════════════════════
+  SQL SUPABASE — ejecuta en SQL Editor de tu proyecto:
 
   create table if not exists ingenia_modules (
     id text primary key, num text, color text,
@@ -22,7 +22,7 @@
     key text primary key, value text,
     updated_at timestamptz default now()
   );
-  -- RLS abierto (uso personal):
+  -- RLS:
   alter table ingenia_modules enable row level security;
   alter table ingenia_classes  enable row level security;
   alter table ingenia_meta     enable row level security;
@@ -38,10 +38,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="theme-color" content="#0a0a0a">
 <title>IngenIA — Plan de Grabación</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Supabase v2 UMD build — expone window.supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
-:root{--bg:#0a0a0a;--bg2:#111111;--bg3:#1a1a1a;--border:#2a2a2a;--border2:#333333;--c1:#00fb9c;--c2:#01a2cd;--c3:#6564e9;--red:#e94560;--gold:#f5a623;--white:#ffffff;--gray:#888888;--gray2:#555555;--text:#e8e8e8;}
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+:root{
+  --bg:#0a0a0a;--bg2:#111111;--bg3:#1a1a1a;--border:#2a2a2a;--border2:#333333;
+  --c1:#00fb9c;--c2:#01a2cd;--c3:#6564e9;--red:#e94560;--gold:#f5a623;
+  --white:#ffffff;--gray:#888888;--gray2:#555555;--text:#e8e8e8;
+}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;min-height:100vh;padding:0 0 80px;}
 
@@ -55,22 +60,22 @@ body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-ser
 .brand span{color:var(--c1);}
 .tr2{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 
-/* SYNC BADGE */
-.sync-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:10.5px;font-weight:600;border:1px solid;transition:all 0.3s;cursor:pointer;user-select:none;}
-.sync-badge.local{background:rgba(245,166,35,.1);border-color:rgba(245,166,35,.3);color:var(--gold);}
-.sync-badge.synced{background:rgba(0,251,156,.1);border-color:rgba(0,251,156,.3);color:var(--c1);}
-.sync-badge.syncing{background:rgba(1,162,205,.1);border-color:rgba(1,162,205,.3);color:var(--c2);}
-.sync-badge.error{background:rgba(233,69,96,.1);border-color:rgba(233,69,96,.3);color:var(--red);}
+/* SYNC */
+.sync-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:10.5px;font-weight:600;border:1px solid;transition:all .3s;cursor:pointer;user-select:none;}
+.sync-badge.local  {background:rgba(245,166,35,.1);border-color:rgba(245,166,35,.3);color:var(--gold);}
+.sync-badge.synced {background:rgba(0,251,156,.1); border-color:rgba(0,251,156,.3); color:var(--c1);}
+.sync-badge.syncing{background:rgba(1,162,205,.1); border-color:rgba(1,162,205,.3); color:var(--c2);}
+.sync-badge.error  {background:rgba(233,69,96,.1);  border-color:rgba(233,69,96,.3);  color:var(--red);}
 .sdot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
 .pulse{animation:pulse 1.1s ease-in-out infinite;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
 
 /* PROGRESS */
 .gp{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 11px;}
-.gp-label{font-size:9.5px;color:var(--gray);font-weight:600;letter-spacing:1px;text-transform:uppercase;}
-.gp-bar-w{width:70px;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;}
-.gp-bar{height:100%;background:linear-gradient(90deg,var(--c3),var(--c2),var(--c1));border-radius:2px;transition:width .4s;}
-.gp-count{font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--c1);}
+.gp-lbl{font-size:9px;color:var(--gray);font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+.gp-bw{width:70px;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;}
+.gp-b{height:100%;background:linear-gradient(90deg,var(--c3),var(--c2),var(--c1));border-radius:2px;transition:width .4s;}
+.gp-n{font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--c1);}
 
 /* TIMER */
 .timer{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 11px;}
@@ -79,7 +84,7 @@ body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-ser
 .tbtn{background:none;border:none;cursor:pointer;font-size:13px;padding:0 2px;line-height:1;transition:transform .15s;}
 .tbtn:hover{transform:scale(1.2);}
 
-/* BUTTONS */
+/* BTN */
 .btn{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;border:none;cursor:pointer;font-family:'Space Grotesk',sans-serif;white-space:nowrap;transition:all .15s;}
 .btn-g{background:rgba(0,251,156,.1);border:1px solid rgba(0,251,156,.3);color:var(--c1);}
 .btn-g:hover{background:rgba(0,251,156,.2);}
@@ -98,28 +103,28 @@ body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-ser
 /* BANNERS */
 .banner{display:none;padding:8px 20px;font-size:11.5px;align-items:center;gap:10px;flex-wrap:wrap;}
 .b-warn{background:rgba(245,166,35,.07);border-bottom:1px solid rgba(245,166,35,.25);color:var(--gold);}
-.b-err{background:rgba(233,69,96,.07);border-bottom:1px solid rgba(233,69,96,.25);color:var(--red);}
-.b-info{background:rgba(1,162,205,.07);border-bottom:1px solid rgba(1,162,205,.25);color:var(--c2);}
+.b-err {background:rgba(233,69,96,.07); border-bottom:1px solid rgba(233,69,96,.25); color:var(--red);}
+.b-info{background:rgba(1,162,205,.07); border-bottom:1px solid rgba(1,162,205,.25); color:var(--c2);}
 .banner strong{font-weight:700;}
 .bclose{margin-left:auto;background:none;border:none;color:currentColor;cursor:pointer;font-size:16px;opacity:.7;}
 .bclose:hover{opacity:1;}
 
-/* READONLY BAR */
+/* READONLY */
 .ro-bar{display:none;background:rgba(101,100,233,.12);border-bottom:1px solid rgba(101,100,233,.3);padding:7px 20px;font-size:11.5px;color:var(--c3);align-items:center;gap:10px;}
 body.readonly .ro-bar{display:flex;}
 
 /* HERO */
 .hero{padding:26px 20px 16px;background:linear-gradient(180deg,#0f0f1a 0%,var(--bg) 100%);border-bottom:1px solid var(--border);}
 .hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-.hero-title{font-size:26px;font-weight:700;color:var(--white);letter-spacing:-.8px;margin-bottom:4px;}
-.hero-title span{background:linear-gradient(135deg,var(--c1),var(--c2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.hero-sub{font-size:11.5px;color:var(--gray);max-width:440px;line-height:1.6;}
-.hero-meta{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;}
+.htitle{font-size:26px;font-weight:700;color:var(--white);letter-spacing:-.8px;margin-bottom:4px;}
+.htitle span{background:linear-gradient(135deg,var(--c1),var(--c2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hsub{font-size:11.5px;color:var(--gray);max-width:440px;line-height:1.6;}
+.hmeta{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;}
 .hm{font-size:11px;color:var(--gray2);display:flex;align-items:center;gap:4px;}
 .hm strong{color:var(--text);}
 .sb-btn{padding:7px 13px;background:rgba(101,100,233,.12);border:1px solid rgba(101,100,233,.35);border-radius:8px;color:var(--c3);font-size:11px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:background .15s;}
 .sb-btn:hover{background:rgba(101,100,233,.22);}
-.sbdot{width:7px;height:7px;border-radius:50%;background:var(--gold);transition:background .3s;}
+.sbdot{width:7px;height:7px;border-radius:50%;background:var(--gold);transition:background .3s;flex-shrink:0;}
 .sbdot.ok{background:var(--c1);}
 .sbdot.err{background:var(--red);}
 
@@ -135,9 +140,9 @@ body.readonly .ro-bar{display:flex;}
 .fb{padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border2);background:transparent;color:var(--gray);cursor:pointer;transition:all .2s;font-family:'Space Grotesk',sans-serif;}
 .fb:hover,.fb.active{border-color:var(--c2);color:var(--c2);background:rgba(1,162,205,.08);}
 .sw{margin-left:auto;position:relative;}
-.si{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:11px;padding:5px 11px 5px 28px;outline:none;width:160px;transition:all .2s;}
-.si:focus{border-color:var(--c2);width:210px;}
-.si-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--gray2);font-size:11px;pointer-events:none;}
+.si-inp{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:11px;padding:5px 11px 5px 28px;outline:none;width:160px;transition:all .2s;}
+.si-inp:focus{border-color:var(--c2);width:210px;}
+.si-ico{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--gray2);font-size:11px;pointer-events:none;}
 
 /* CONTENT */
 .content{padding:0 20px;}
@@ -186,8 +191,6 @@ body.readonly .m-acts{display:none;}
 .cls-row.s-locacion::before{background:var(--c2);}
 .cls-row.s-pendiente::before{background:var(--border2);}
 .cls-row.s-skool::before{background:var(--c3);}
-.cls-row.flash{animation:flash .7s ease;}
-@keyframes flash{0%{background:rgba(1,162,205,.18)}100%{background:transparent}}
 .c-handle{cursor:grab;color:var(--gray2);font-size:11px;opacity:0;transition:opacity .15s;flex-shrink:0;margin-top:2px;}
 .cls-row:hover .c-handle{opacity:1;}
 body.readonly .c-handle{display:none;}
@@ -207,8 +210,8 @@ body.readonly .c-ti{pointer-events:none;}
 body.readonly .c-de{pointer-events:none;}
 .cls-row.s-grabada .c-de{opacity:.4;}
 .badge{padding:1px 7px;border-radius:12px;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap;}
-.b-grabada{background:rgba(0,251,156,.1);color:var(--c1);border:1px solid rgba(0,251,156,.2);}
-.b-urgente{background:rgba(233,69,96,.1);color:var(--red);border:1px solid rgba(233,69,96,.2);}
+.b-grabada {background:rgba(0,251,156,.1);color:var(--c1);border:1px solid rgba(0,251,156,.2);}
+.b-urgente {background:rgba(233,69,96,.1);color:var(--red);border:1px solid rgba(233,69,96,.2);}
 .b-estrella{background:rgba(245,166,35,.1);color:var(--gold);border:1px solid rgba(245,166,35,.2);}
 .b-locacion{background:rgba(1,162,205,.1);color:var(--c2);border:1px solid rgba(1,162,205,.2);}
 .b-pendiente{background:rgba(255,255,255,.04);color:var(--gray2);border:1px solid var(--border2);}
@@ -230,33 +233,29 @@ body.readonly .c-ctrl{display:none;}
 .qa-i{flex:1;min-width:140px;background:var(--bg3);border:1px solid var(--c3);border-radius:6px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:11.5px;padding:6px 9px;outline:none;}
 .qa-s{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:11px;padding:5px 7px;outline:none;cursor:pointer;}
 
-/* ADD CLASS BTN */
 .add-cls-btn{display:flex;align-items:center;gap:6px;width:100%;padding:9px 15px;color:var(--gray2);font-size:11px;font-weight:600;cursor:pointer;border:none;background:none;font-family:'Space Grotesk',sans-serif;transition:color .15s;border-top:1px solid var(--border);}
 .add-cls-btn::before{content:'+';font-size:14px;}
 .add-cls-btn:hover{color:var(--c1);}
-body.readonly .add-cls-btn{display:none;}
+body.readonly .add-cls-btn,.quickadd{display:none;}
+body.readonly .quickadd{display:none!important;}
 
-/* ADD MODULE BAR */
 .add-mod-bar{margin:4px 0 18px;border:1px dashed var(--border2);border-radius:12px;padding:12px;text-align:center;}
 .add-mod-bar button{background:rgba(101,100,233,.1);border:1px solid rgba(101,100,233,.3);color:var(--c3);padding:6px 16px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all .15s;}
 .add-mod-bar button:hover{background:rgba(101,100,233,.2);}
 body.readonly .add-mod-bar{display:none;}
 
-/* NOTES */
 .notes-sec{margin:4px 0 0;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;}
 .notes-title{font-size:10.5px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
 .notes-area{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:11.5px;padding:9px 11px;resize:vertical;min-height:60px;outline:none;line-height:1.6;transition:border-color .2s;}
 .notes-area:focus{border-color:var(--c2);}
 
-/* HISTORY */
 .hist-sec{display:none;margin:8px 0 0;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;}
 .hist-sec.open{display:block;}
-.hist-title{font-size:10.5px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
-.hist-item{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border);}
-.hist-item:last-child{border-bottom:none;}
+.hist-hdr{font-size:10.5px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.h-item{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border);}
+.h-item:last-child{border-bottom:none;}
 .h-dot{width:6px;height:6px;border-radius:50%;background:var(--c2);flex-shrink:0;margin-top:5px;}
 .h-txt{font-size:11px;color:var(--gray);flex:1;}
-.h-txt strong{color:var(--text);}
 .h-time{font-size:10px;color:var(--gray2);font-family:'JetBrains Mono',monospace;flex-shrink:0;}
 
 /* MODAL */
@@ -273,10 +272,16 @@ body.readonly .add-mod-bar{display:none;}
 .cg{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
 .cs{width:24px;height:24px;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:all .15s;}
 .cs.sel{border-color:var(--white);transform:scale(1.15);}
-.mc{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:9px 11px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--c1);overflow-x:auto;white-space:pre;margin-top:6px;}
+.mc{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:9px 11px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--c1);overflow-x:auto;white-space:pre;margin-top:6px;max-height:180px;overflow-y:auto;}
+
+/* ERROR PANEL */
+.err-panel{display:none;margin:6px 20px;background:rgba(233,69,96,.07);border:1px solid rgba(233,69,96,.3);border-radius:10px;padding:12px 16px;}
+.err-panel.show{display:block;}
+.err-title{font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px;}
+.err-msg{font-size:10.5px;color:#cc6677;font-family:'JetBrains Mono',monospace;line-height:1.5;}
 
 /* TOAST */
-.toast{position:fixed;bottom:18px;right:18px;background:var(--bg3);border:1px solid var(--c1);color:var(--c1);padding:8px 14px;border-radius:8px;font-size:11.5px;font-weight:600;opacity:0;transform:translateY(5px);transition:all .25s;pointer-events:none;z-index:999;max-width:260px;}
+.toast{position:fixed;bottom:18px;right:18px;background:var(--bg3);border:1px solid var(--c1);color:var(--c1);padding:8px 14px;border-radius:8px;font-size:11.5px;font-weight:600;opacity:0;transform:translateY(5px);transition:all .25s;pointer-events:none;z-index:999;max-width:280px;}
 .toast.show{opacity:1;transform:translateY(0);}
 .toast.err{border-color:var(--red);color:var(--red);}
 .toast.warn{border-color:var(--gold);color:var(--gold);}
@@ -285,8 +290,8 @@ body.readonly .add-mod-bar{display:none;}
 
 @media(max-width:560px){
   .topbar,.hero,.stats,.toolbar,.content{padding-left:14px;padding-right:14px;}
-  .gp-bar-w{width:50px;}
-  .hero-title{font-size:22px;}
+  .gp-bw{width:50px;}
+  .htitle{font-size:22px;}
   .timer{display:none;}
   .mv-s{display:none;}
 }
@@ -294,70 +299,75 @@ body.readonly .add-mod-bar{display:none;}
 </head>
 <body>
 
-<!-- TOPBAR -->
 <div class="topbar">
   <div class="tl">
-    <img src="logo.png" class="logo-img" alt="IngenIA" onerror="this.style.display='none';document.getElementById('lfb').style.display='flex'">
-    <div class="logo-fb" id="lfb"><div class="logo-dot">IA</div><div class="brand">Ingen<span>IA</span></div></div>
+    <img src="logo.png" class="logo-img" alt="IngenIA"
+      onerror="this.style.display='none';document.getElementById('lfb').style.display='flex'">
+    <div class="logo-fb" id="lfb">
+      <div class="logo-dot">IA</div>
+      <div class="brand">Ingen<span>IA</span></div>
+    </div>
   </div>
   <div class="tr2">
-    <div class="timer" title="Timer sesión de grabación — clic para iniciar">
+    <div class="timer" title="Timer de sesión">
       <span>🎬</span>
       <span class="tdisp" id="tdisp">00:00</span>
       <button class="tbtn" id="tbtn" onclick="toggleTimer()">▶</button>
-      <button class="tbtn" onclick="resetTimer()" title="Reiniciar">↺</button>
+      <button class="tbtn" onclick="resetTimer()">↺</button>
     </div>
-    <div class="sync-badge local" id="sync-badge" onclick="openSbConfig()" title="Clic para configurar Supabase">
+    <div class="sync-badge local" id="sync-badge" onclick="openSbConfig()" title="Configurar Supabase">
       <div class="sdot" id="sdot"></div>
       <span id="slbl">Local</span>
     </div>
     <div class="gp">
-      <span class="gp-label">Progreso</span>
-      <div class="gp-bar-w"><div class="gp-bar" id="gp-bar" style="width:0%"></div></div>
-      <span class="gp-count" id="gp-count">0/0</span>
+      <span class="gp-lbl">Progreso</span>
+      <div class="gp-bw"><div class="gp-b" id="gp-bar" style="width:0%"></div></div>
+      <span class="gp-n" id="gp-count">0/0</span>
     </div>
     <button class="btn btn-g btn-sm" onclick="exportJSON()" title="Ctrl+S">💾</button>
     <label class="btn btn-b btn-sm" style="cursor:pointer" title="Importar JSON">📂<input type="file" accept=".json" onchange="importJSON(event)" style="display:none"></label>
     <button class="btn btn-p btn-sm" onclick="openAddMod()">＋ Módulo</button>
-    <button class="btn btn-x btn-sm" id="ro-btn" onclick="toggleRO()" title="Modo solo lectura (útil en móvil)">👁</button>
-    <button class="btn btn-x btn-sm" onclick="toggleHist()" title="Historial de cambios">📋</button>
-    <button class="btn btn-x btn-sm" onclick="manualPull()" title="Forzar carga desde Supabase · Ctrl+↑">🔄</button>
+    <button class="btn btn-x btn-sm" id="ro-btn" onclick="toggleRO()" title="Modo lectura">👁</button>
+    <button class="btn btn-x btn-sm" onclick="toggleHist()" title="Historial">📋</button>
+    <button class="btn btn-x btn-sm" onclick="doForcePull()" title="Forzar carga desde Supabase">🔄</button>
   </div>
 </div>
 
-<!-- READONLY BAR -->
 <div class="ro-bar" id="ro-bar">
-  👁 Modo solo lectura activado — los cambios están bloqueados.
+  👁 Modo solo lectura activado.
   <button class="btn btn-sm btn-p" onclick="toggleRO()" style="margin-left:8px">Desactivar</button>
 </div>
 
-<!-- BANNERS -->
 <div class="banner b-warn" id="ban-pending">
   <span>☁</span>
-  <span>Cambios sin sincronizar. <button class="btn btn-sm btn-gold" onclick="push()">Subir ahora</button></span>
+  <span>Cambios locales sin subir. <button class="btn btn-sm btn-gold" onclick="doUpload()">Subir ahora</button></span>
   <button class="bclose" onclick="this.parentElement.style.display='none'">×</button>
 </div>
 <div class="banner b-err" id="ban-offline">
-  <span>📵</span>
-  <span>Sin conexión — cambios guardados localmente.</span>
+  <span>📵</span><span>Sin conexión — guardando localmente.</span>
   <button class="bclose" onclick="this.parentElement.style.display='none'">×</button>
 </div>
 <div class="banner b-info" id="ban-pull">
   <span>🔄</span>
-  <span id="ban-pull-txt">Hay cambios de otro dispositivo disponibles.</span>
-  <button class="btn btn-sm btn-b" onclick="manualPull()">Cargar ahora</button>
+  <span id="ban-pull-txt">Cambios desde otro dispositivo disponibles.</span>
+  <button class="btn btn-sm btn-b" onclick="doForcePull()">Cargar ahora</button>
   <button class="bclose" onclick="this.parentElement.style.display='none'">×</button>
 </div>
 
-<!-- HERO -->
+<!-- Error panel visible -->
+<div class="err-panel" id="err-panel">
+  <div class="err-title">⚠ Error de Supabase</div>
+  <div class="err-msg" id="err-msg">—</div>
+</div>
+
 <div class="hero">
   <div class="hero-top">
     <div>
-      <h1 class="hero-title">Plan de <span>Grabación</span></h1>
-      <p class="hero-sub">Edita · Arrastra · Marca · Sync en tiempo real entre dispositivos</p>
-      <div class="hero-meta">
-        <span class="hm">⏱ Total del curso: <strong id="total-time">—</strong></span>
-        <span class="hm">🕐 Última sync: <strong id="last-sync">—</strong></span>
+      <h1 class="htitle">Plan de <span>Grabación</span></h1>
+      <p class="hsub">Edita · Arrastra · Marca · Sync entre dispositivos</p>
+      <div class="hmeta">
+        <span class="hm">⏱ Total: <strong id="total-time">—</strong></span>
+        <span class="hm">🕐 Sync: <strong id="last-sync">—</strong></span>
         <span class="hm" id="rt-ind" style="display:none">⚡ <strong style="color:var(--c1)">Realtime activo</strong></span>
       </div>
     </div>
@@ -367,28 +377,24 @@ body.readonly .add-mod-bar{display:none;}
   </div>
 </div>
 
-<!-- STATS -->
 <div class="stats" id="stats-row"></div>
 
-<!-- TOOLBAR -->
 <div class="toolbar">
-  <button class="fb active" onclick="setF('all',this)">Todas</button>
-  <button class="fb" onclick="setF('grabada',this)">✅ Grabadas</button>
-  <button class="fb" onclick="setF('urgente',this)">🔴 Urgentes</button>
-  <button class="fb" onclick="setF('pendiente',this)">⏳ Pendientes</button>
-  <button class="fb" onclick="setF('estrella',this)">⭐ Estrella</button>
-  <button class="fb" onclick="setF('locacion',this)">📍 Locación</button>
-  <button class="fb" onclick="setF('skool',this)">📌 Skool</button>
+  <button class="fb active" onclick="setFlt('all',this)">Todas</button>
+  <button class="fb" onclick="setFlt('grabada',this)">✅ Grabadas</button>
+  <button class="fb" onclick="setFlt('urgente',this)">🔴 Urgentes</button>
+  <button class="fb" onclick="setFlt('pendiente',this)">⏳ Pendientes</button>
+  <button class="fb" onclick="setFlt('estrella',this)">⭐ Estrella</button>
+  <button class="fb" onclick="setFlt('locacion',this)">📍 Locación</button>
+  <button class="fb" onclick="setFlt('skool',this)">📌 Skool</button>
   <div class="sw">
-    <span class="si-icon">🔍</span>
-    <input class="si" id="si" placeholder="Buscar... (Ctrl+K)" oninput="render()" type="search">
+    <span class="si-ico">🔍</span>
+    <input class="si-inp" id="si-inp" placeholder="Buscar... (Ctrl+K)" oninput="render()" type="search">
   </div>
 </div>
 
-<!-- MAIN -->
 <div class="content" id="mc"></div>
 
-<!-- BOTTOM -->
 <div class="content">
   <div class="add-mod-bar"><button onclick="openAddMod()">＋ Añadir nuevo módulo</button></div>
   <div class="notes-sec">
@@ -396,35 +402,35 @@ body.readonly .add-mod-bar{display:none;}
     <textarea class="notes-area" id="gn" placeholder="Ideas, pendientes, recordatorios..." oninput="notesChanged()"></textarea>
   </div>
   <div class="hist-sec" id="hist-sec">
-    <div class="hist-title">
-      <span>📋 Historial de cambios</span>
+    <div class="hist-hdr">
+      <span>📋 Historial</span>
       <button class="btn btn-x btn-sm" onclick="clearHist()">Limpiar</button>
     </div>
     <div id="hist-list"></div>
   </div>
 </div>
 
-<!-- MODAL -->
 <div class="modal-bg" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="mbox"></div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-// SUPABASE CREDENTIALS — hardcoded + localStorage override
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// SUPABASE — credenciales hardcoded (override en localStorage)
+// ═══════════════════════════════════════════════════════════
 const DEF_URL = 'https://whmdhyuqouwzxgyyfblr.supabase.co';
 const DEF_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobWRoeXVxb3V3enhneXlmYmxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MTAzNzgsImV4cCI6MjA5MzA4NjM3OH0.ZohcoQTfBzkJ3wY1potT64SpmRCKeN5UcQfS7ye-SKY';
 
 let SB_URL = localStorage.getItem('sb_url') || DEF_URL;
 let SB_KEY  = localStorage.getItem('sb_key')  || DEF_KEY;
-let sb = null, sbOk = false, rtChan = null;
+let sbClient = null;
+let sbReady  = false;
+let rtChan   = null;
 
-// ═══════════════════════════════════════════════════════════════
-// CONSTANTS
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// STATUSES & COLORS
+// ═══════════════════════════════════════════════════════════
 const ST = {
   grabada:  {label:'✅ Grabada',  cls:'b-grabada' },
   urgente:  {label:'🔴 Urgente',  cls:'b-urgente' },
@@ -433,680 +439,1096 @@ const ST = {
   pendiente:{label:'⏳ Pendiente',cls:'b-pendiente'},
   skool:    {label:'📌 Skool',    cls:'b-skool'   },
 };
-const COLORS=['#1a5c3a','#8a1e1e','#1a3a6e','#5a1070','#a05010','#1e5a5a','#6e4a1a','#1a1e6e','#5a1040','#2a5a1a','#4a1a6e','#1a6e4a','#6e1a1a','#1a4a6e','#6e6a1a'];
+const COLORS = ['#1a5c3a','#8a1e1e','#1a3a6e','#5a1070','#a05010','#1e5a5a','#6e4a1a','#1a1e6e','#5a1040','#2a5a1a','#4a1a6e','#1a6e4a','#6e1a1a','#1a4a6e','#6e6a1a'];
 
-// ═══════════════════════════════════════════════════════════════
-// DEFAULT DATA (from JSON export 2026-04-30)
-// ═══════════════════════════════════════════════════════════════
-const DD = {modules:[
-  {id:"m0",num:"0",color:"#1a5c3a",title:"Bienvenida",sub:"Visible para todos · Sin restricción · Nivel 1",classes:[
-    {id:"m0c1",num:"C1",title:"Quién soy y por qué estoy aquí",desc:"Tu historia desde Foto Franco. 13 años, 14 países, proyectos reales.",dur:"5 min",status:"grabada"},
-    {id:"m0c2",num:"C2",title:"Por qué la IA es el antes y el después",desc:"Inspiracional. Sin pantalla. Películas ficticias, apps sin suscripción.",dur:"3-4 min",status:"grabada"},
-    {id:"m0c3",num:"C3",title:"Análisis del Video Viral #1",desc:"Reproduces el video. Pausas clave. Explicas efectos de sonido y ritmo visual.",dur:"6 min",status:"grabada"},
-    {id:"m0c4",num:"C4",title:"Análisis del Video Viral #2",desc:"Mismo formato. Diferente técnica. Terminas indicando que el siguiente módulo enseña cómo.",dur:"6 min",status:"grabada"},
+// ═══════════════════════════════════════════════════════════
+// DEFAULT DATA — datos reales de Santiago (JSON 2026-04-30)
+// ═══════════════════════════════════════════════════════════
+const DEFAULT_MODULES = [
+  {id:'m0',num:'0',color:'#1a5c3a',title:'Bienvenida',sub:'Visible para todos · Sin restricción · Nivel 1',classes:[
+    {id:'m0c1',num:'C1',title:'Quién soy y por qué estoy aquí',desc:'Tu historia desde Foto Franco. 13 años, 14 países, proyectos reales.',dur:'5 min',status:'grabada'},
+    {id:'m0c2',num:'C2',title:'Por qué la IA es el antes y el después',desc:'Inspiracional. Sin pantalla. Películas ficticias, apps sin suscripción.',dur:'3-4 min',status:'grabada'},
+    {id:'m0c3',num:'C3',title:'Análisis del Video Viral #1',desc:'Reproduces el video. Pausas clave. Explicas efectos de sonido y ritmo.',dur:'6 min',status:'grabada'},
+    {id:'m0c4',num:'C4',title:'Análisis del Video Viral #2',desc:'Mismo formato. Diferente técnica. Terminas indicando el módulo siguiente.',dur:'6 min',status:'grabada'},
   ]},
-  {id:"m1",num:"1",color:"#8a1e1e",title:"Tu Primer Video con IA",sub:"Requiere Nivel 2 · Fundamentos completos",classes:[
-    {id:"m1c1",num:"C1",title:"Muestro los nodos y spaces del video Viral",desc:"Abres Freepik desde cero. Nodo por nodo. Prompts exactos.",dur:"12 min",status:"grabada"},
-    {id:"m1c6",num:"C2",title:"Los efectos de sonido que uso + pack descargable",desc:"Compartes el pack. Qué efecto va en qué momento. El pack se actualiza en la comunidad.",dur:"6 min",status:"grabada"},
-    {id:"m1c7",num:"C3",title:"Los prompts que funcionan + PDF descargable",desc:"Los 3-4 más versátiles. PDF completo como recurso descargable.",dur:"7 min",status:"grabada"},
-    {id:"m1c3",num:"C4",title:"Qué fotografía necesitas y cómo tomarlas",desc:"Con dron o teléfono. Ángulos, altura, luz. Google Maps como alternativa.",dur:"5 min",status:"grabada"},
-    {id:"m1c2",num:"C5",title:"Freepik y Higgsfield: las plataformas que uso",desc:"Comparas ambas. Para qué sirve cada una y cuándo usarlas.",dur:"8 min",status:"grabada"},
-    {id:"m1c4",num:"C6",title:"Cómo borrar el fondo — Método 1",desc:"Poner la casa ya terminada detrás de ti. Mezclar contenido real con IA.",dur:"6 min",status:"grabada"},
-    {id:"m1c5",num:"C7",title:"Cómo borrar el fondo — Método 2 (avanzado)",desc:"Herramienta diferente, hasta 14 segundos. Segunda forma de vincular real con IA.",dur:"7 min",status:"grabada"},
-    {id:"m1c8",num:"C8",title:"🎬 CASO REAL: De la foto al video en un terreno",desc:"Exterior: dron, fotos reales. Pantalla: Photoshop → Freepik → video final con efectos.",dur:"20 min",status:"estrella"},
+  {id:'m1',num:'1',color:'#8a1e1e',title:'Tu Primer Video con IA',sub:'Requiere Nivel 2 · Fundamentos completos',classes:[
+    {id:'m1c1',num:'C1',title:'Muestro los nodos y spaces del video Viral',desc:'Abres Freepik desde cero. Nodo por nodo. Prompts exactos.',dur:'12 min',status:'grabada'},
+    {id:'m1c6',num:'C2',title:'Los efectos de sonido que uso + pack descargable',desc:'Compartes el pack. Qué efecto va en qué momento. Pack se actualiza en la comunidad.',dur:'6 min',status:'grabada'},
+    {id:'m1c7',num:'C3',title:'Los prompts que funcionan + PDF descargable',desc:'Los 3-4 más versátiles. PDF completo como recurso.',dur:'7 min',status:'grabada'},
+    {id:'m1c3',num:'C4',title:'Qué fotografía necesitas y cómo tomarlas',desc:'Con dron o teléfono. Ángulos, altura, luz. Google Maps como alternativa.',dur:'5 min',status:'grabada'},
+    {id:'m1c2',num:'C5',title:'Freepik y Higgsfield: las plataformas que uso',desc:'Comparas ambas. Para qué sirve cada una.',dur:'8 min',status:'grabada'},
+    {id:'m1c4',num:'C6',title:'Cómo borrar el fondo — Método 1',desc:'Poner la casa terminada detrás de ti. Real con IA básico.',dur:'6 min',status:'grabada'},
+    {id:'m1c5',num:'C7',title:'Cómo borrar el fondo — Método 2 (avanzado)',desc:'Herramienta diferente, hasta 14 segundos.',dur:'7 min',status:'grabada'},
+    {id:'m1c8',num:'C8',title:'🎬 CASO REAL: De la foto al video en un terreno',desc:'Exterior: dron, fotos reales. Pantalla: Photoshop → Freepik → video final.',dur:'20 min',status:'estrella'},
   ]},
-  {id:"m2",num:"2",color:"#1a3a6e",title:"Técnicas Específicas",sub:"Requiere Nivel 3 · Proyectos avanzados",classes:[
-    {id:"m2c5",num:"C1",title:"SketchUp como base para planos complejos",desc:"Modelado simple + texto descriptivo = resultado preciso.",dur:"8 min",status:"urgente"},
-    {id:"m2c4",num:"C2",title:"Consistencia visual, ¿cómo lograrla?",desc:"Mismo estilo, paleta, movimiento y ritmo. Separa al profesional del amateur.",dur:"8 min",status:"urgente"},
-    {id:"m2c3",num:"C3",title:"Cuándo y cómo usar Photoshop como puente",desc:"Lo que la IA no interpreta bien sola. Preparar la imagen correctamente.",dur:"8 min",status:"urgente"},
-    {id:"m2c2",num:"C4",title:"Demarcación de terrenos y trazado de planos",desc:"Líneas, límites, distribución de lotes. Muy solicitado por constructoras.",dur:"8 min",status:"grabada"},
+  {id:'m2',num:'2',color:'#1a3a6e',title:'Técnicas Específicas',sub:'Requiere Nivel 3 · Proyectos avanzados',classes:[
+    {id:'m2c5',num:'C1',title:'SketchUp como base para planos complejos',desc:'Modelado simple + texto descriptivo = resultado preciso.',dur:'8 min',status:'urgente'},
+    {id:'m2c4',num:'C2',title:'Consistencia visual, ¿cómo lograrla?',desc:'Mismo estilo, paleta, movimiento y ritmo. Profesional vs amateur.',dur:'8 min',status:'urgente'},
+    {id:'m2c3',num:'C3',title:'Cuándo y cómo usar Photoshop como puente',desc:'Lo que la IA no interpreta bien sola. Preparar la imagen.',dur:'8 min',status:'urgente'},
+    {id:'m2c2',num:'C4',title:'Demarcación de terrenos y trazado de planos',desc:'Líneas, límites, distribución de lotes.',dur:'8 min',status:'grabada'},
   ]},
-  {id:"m3",num:"3",color:"#5a1070",title:"Nivel Profesional",sub:"Días 31+ o Nivel 4 · Para quienes venden el servicio",classes:[
-    {id:"m3c1",num:"C1",title:"Workflow en campo — Análisis de lo que hice",desc:"Con tu pareja grabando. Cómo haces las fotos del dron y qué buscas.",dur:"10 min",status:"locacion"},
-    {id:"m3c2",num:"C2",title:"Photoshop: la nueva función de rotación de planos",desc:"Para proyectos arquitectónicos avanzados. Alto valor para estudios.",dur:"8 min",status:"pendiente"},
-    {id:"m3_c1777514544083",num:"C3",title:"WorkFlow - Empezando a Construir mi Próximo Video",desc:"Comento qué pienso hacer, crear y qué programas voy a usar.",dur:"10 min",status:"urgente"},
+  {id:'m3',num:'3',color:'#5a1070',title:'Nivel Profesional',sub:'Días 31+ o Nivel 4 · Para quienes venden el servicio',classes:[
+    {id:'m3c1',num:'C1',title:'Workflow en campo — Análisis de lo que hice',desc:'Con tu pareja grabando. Fotos del dron, qué buscas.',dur:'10 min',status:'locacion'},
+    {id:'m3c2',num:'C2',title:'Photoshop: la nueva función de rotación de planos',desc:'Para proyectos arquitectónicos avanzados.',dur:'8 min',status:'pendiente'},
+    {id:'m3_c1777514544083',num:'C3',title:'WorkFlow - Empezando a Construir mi Próximo Video',desc:'Comento qué pienso hacer, crear y qué programas usar.',dur:'10 min',status:'urgente'},
   ]},
-],checked:{"m0c1":true,"m0c2":true,"m0c3":true,"m0c4":true,"m1c1":true,"m1c2":true,"m1c3":true,"m1c4":true,"m1c5":true,"m1c6":true,"m1c7":true,"m2c2":true},notes:""};
+];
+const DEFAULT_CHECKED = {
+  'm0c1':true,'m0c2':true,'m0c3':true,'m0c4':true,
+  'm1c1':true,'m1c2':true,'m1c3':true,'m1c4':true,'m1c5':true,'m1c6':true,'m1c7':true,
+  'm2c2':true,
+};
 
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // STATE
-// ═══════════════════════════════════════════════════════════════
-let modules=[], checked={}, notes='', flt='all', collapsed={};
-let histLog=[], readonly=false, dragData=null;
-let timerSec=0, timerRun=false, timerInt=null;
-let _autoSync=null, _pullDebounce=null;
+// ═══════════════════════════════════════════════════════════
+let modules  = [];
+let checked  = {};
+let notes    = '';
+let flt      = 'all';
+let collapsed= {};
+let histLog  = [];
+let readonly = false;
+let dragData = null;
+let timerSec = 0, timerRun = false, timerInt = null;
+let _autoSync = null, _pullDebounce = null;
 
-// ═══════════════════════════════════════════════════════════════
-// LOCAL STORAGE
-// ═══════════════════════════════════════════════════════════════
-function saveLocal(){
-  localStorage.setItem('ia4_mod', JSON.stringify(modules));
-  localStorage.setItem('ia4_chk', JSON.stringify(checked));
-  localStorage.setItem('ia4_notes', notes);
-  localStorage.setItem('ia4_hist', JSON.stringify(histLog.slice(0,60)));
-}
-function loadLocal(){
-  try{ modules=JSON.parse(localStorage.getItem('ia4_mod'))||[]; }catch{ modules=[]; }
-  try{ checked=JSON.parse(localStorage.getItem('ia4_chk'))||{}; }catch{ checked={}; }
-  notes = localStorage.getItem('ia4_notes') || '';
-  try{ histLog=JSON.parse(localStorage.getItem('ia4_hist'))||[]; }catch{ histLog=[]; }
-
-  // If empty localStorage, seed from DEFAULT_DATA
-  if(!modules.length){
-    modules = JSON.parse(JSON.stringify(DD.modules));
-    checked = {...DD.checked};
-    notes   = DD.notes;
-  }
-
-  // Migrate old v3 keys if they exist
-  const oldMod = localStorage.getItem('ingenia_v3_modules');
-  if(oldMod && !localStorage.getItem('ia4_mod')){
-    try{
-      modules = JSON.parse(oldMod);
-      const oldChk = localStorage.getItem('ingenia_v3_checked');
-      if(oldChk) checked = JSON.parse(oldChk);
-      saveLocal();
-    }catch{}
+// ═══════════════════════════════════════════════════════════
+// LOCAL STORAGE — siempre guarda localmente primero
+// ═══════════════════════════════════════════════════════════
+function saveLocal() {
+  try {
+    localStorage.setItem('ia4_mod',   JSON.stringify(modules));
+    localStorage.setItem('ia4_chk',   JSON.stringify(checked));
+    localStorage.setItem('ia4_notes', notes);
+    localStorage.setItem('ia4_hist',  JSON.stringify(histLog.slice(0, 60)));
+  } catch(e) {
+    console.error('[IngenIA] saveLocal error:', e);
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
+function loadLocal() {
+  try {
+    // Try new v4 keys
+    const m4 = localStorage.getItem('ia4_mod');
+    if (m4) {
+      modules = JSON.parse(m4) || [];
+    } else {
+      // Try migrating from old v3 keys
+      const m3 = localStorage.getItem('ingenia_v3_modules');
+      if (m3) {
+        console.log('[IngenIA] Migrating from v3 data...');
+        modules = JSON.parse(m3) || [];
+        const c3 = localStorage.getItem('ingenia_v3_checked');
+        checked = c3 ? (JSON.parse(c3) || {}) : {};
+      }
+    }
+
+    const c4 = localStorage.getItem('ia4_chk');
+    if (c4 && !localStorage.getItem('ingenia_v3_checked')) {
+      checked = JSON.parse(c4) || {};
+    }
+
+    notes = localStorage.getItem('ia4_notes') || '';
+
+    const h = localStorage.getItem('ia4_hist');
+    histLog = h ? (JSON.parse(h) || []) : [];
+  } catch(e) {
+    console.error('[IngenIA] loadLocal error:', e);
+    modules = []; checked = {}; notes = ''; histLog = [];
+  }
+
+  // Seed defaults if nothing in storage
+  if (!modules || modules.length === 0) {
+    console.log('[IngenIA] No local data found — seeding defaults');
+    modules = JSON.parse(JSON.stringify(DEFAULT_MODULES));
+    checked = Object.assign({}, DEFAULT_CHECKED);
+    notes   = '';
+  }
+
+  console.log('[IngenIA] loadLocal: ' + modules.length + ' modules, ' + Object.keys(checked).length + ' checked');
+}
+
+// ═══════════════════════════════════════════════════════════
 // HISTORY
-// ═══════════════════════════════════════════════════════════════
-function logChange(msg){
-  if(!msg) return;
-  const ts = new Date();
-  histLog.unshift({msg, time: ts.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'})});
-  if(histLog.length>60) histLog.pop();
+// ═══════════════════════════════════════════════════════════
+function logChange(msg) {
+  if (!msg) return;
+  histLog.unshift({
+    msg,
+    time: new Date().toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit', second:'2-digit'})
+  });
+  if (histLog.length > 60) histLog.pop();
   renderHist();
 }
-function renderHist(){
-  const el=document.getElementById('hist-list'); if(!el) return;
-  if(!histLog.length){ el.innerHTML='<div class="empty">Sin cambios registrados todavía.</div>'; return; }
-  el.innerHTML=histLog.slice(0,20).map(h=>`
-    <div class="hist-item">
-      <div class="h-dot"></div>
-      <div class="h-txt">${escH(h.msg)}</div>
-      <div class="h-time">${h.time}</div>
-    </div>`).join('');
+function renderHist() {
+  const el = document.getElementById('hist-list');
+  if (!el) return;
+  if (!histLog.length) { el.innerHTML = '<div class="empty">Sin cambios registrados.</div>'; return; }
+  el.innerHTML = histLog.slice(0, 20).map(h =>
+    '<div class="h-item"><div class="h-dot"></div><div class="h-txt">' + escH(h.msg) + '</div><div class="h-time">' + h.time + '</div></div>'
+  ).join('');
 }
-function toggleHist(){ document.getElementById('hist-sec').classList.toggle('open'); }
-function clearHist(){ histLog=[]; saveLocal(); renderHist(); }
+function toggleHist() { document.getElementById('hist-sec').classList.toggle('open'); }
+function clearHist()  { histLog = []; saveLocal(); renderHist(); }
 
-// ═══════════════════════════════════════════════════════════════
-// SUPABASE — init con test real de conexión
-// ═══════════════════════════════════════════════════════════════
-async function initSupabase(){
-  if(!SB_URL||!SB_KEY){ setSS('local'); return; }
-  try{
-    sb = supabase.createClient(SB_URL, SB_KEY);
-    // ← FIX #1: test real — la versión anterior solo creaba el cliente sin verificar
-    const {error} = await sb.from('ingenia_modules').select('id').limit(1);
-    if(error) throw error;
-    sbOk=true;
+// ═══════════════════════════════════════════════════════════
+// SUPABASE INIT — con conexión real verificada
+// ═══════════════════════════════════════════════════════════
+async function initSupabase() {
+  // Check if supabase library loaded
+  if (typeof supabase === 'undefined' || typeof supabase.createClient !== 'function') {
+    showErr('La librería de Supabase no se cargó. Verifica tu conexión a internet.');
+    console.error('[IngenIA] supabase library not found on window');
+    return;
+  }
+  if (!SB_URL || !SB_KEY) {
+    setSS('local');
+    console.log('[IngenIA] No Supabase credentials — running in local mode');
+    return;
+  }
+  console.log('[IngenIA] Connecting to Supabase:', SB_URL.slice(0, 40) + '...');
+  try {
+    sbClient = supabase.createClient(SB_URL, SB_KEY);
+
+    // REAL connection test — this is the fix for the false-positive sbConnected bug
+    const { data: testData, error: testErr } = await sbClient
+      .from('ingenia_modules')
+      .select('id')
+      .limit(1);
+
+    if (testErr) {
+      throw new Error('Test query failed: ' + testErr.message);
+    }
+
+    sbReady = true;
     setSS('synced');
     document.getElementById('sbdot').classList.add('ok');
-    document.getElementById('ban-offline').style.display='none';
-    // ← FIX #2: pull on startup para cargar datos reales del servidor
-    await pull();
-    // ← FIX #4: suscripción realtime
-    subscribeRT();
-  }catch(e){
-    sbOk=false;
+    document.getElementById('ban-offline').style.display = 'none';
+    hideErr();
+    console.log('[IngenIA] Supabase connected. Pulling data...');
+
+    // Pull on startup
+    await doPull();
+
+    // Subscribe realtime
+    subscribeRealtime();
+
+  } catch(e) {
+    sbReady = false;
     setSS('error');
     document.getElementById('sbdot').classList.add('err');
-    toast('⚠ Supabase: '+e.message, true);
+    showErr(e.message);
+    console.error('[IngenIA] Supabase init error:', e);
+    // Still render local data
+    render();
   }
 }
 
-function setSS(s){
-  const b=document.getElementById('sync-badge'), d=document.getElementById('sdot'), l=document.getElementById('slbl');
-  b.className='sync-badge '+s;
-  d.className='sdot'+(s==='syncing'?' pulse':'');
-  l.textContent={local:'Local',synced:'Sincronizado',syncing:'Sincronizando...',error:'Error BD'}[s]||s;
+function showErr(msg) {
+  const p = document.getElementById('err-panel');
+  const m = document.getElementById('err-msg');
+  if (p) p.classList.add('show');
+  if (m) m.textContent = msg;
 }
-function setLastSync(){
-  const el=document.getElementById('last-sync');
-  if(el) el.textContent=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-}
-
-// ═══════════════════════════════════════════════════════════════
-// REALTIME — escucha cambios de otros dispositivos
-// ═══════════════════════════════════════════════════════════════
-function subscribeRT(){
-  if(!sb||rtChan) return;
-  rtChan = sb.channel('ingenia-rt')
-    .on('postgres_changes',{event:'*',schema:'public',table:'ingenia_modules'}, onRemoteChange)
-    .on('postgres_changes',{event:'*',schema:'public',table:'ingenia_classes'},  onRemoteChange)
-    .on('postgres_changes',{event:'*',schema:'public',table:'ingenia_meta'},     onRemoteChange)
-    .subscribe(status=>{
-      if(status==='SUBSCRIBED'){
-        document.getElementById('rt-ind').style.display='';
-        logChange('⚡ Realtime conectado — sync automático activado');
-      }
-    });
+function hideErr() {
+  const p = document.getElementById('err-panel');
+  if (p) p.classList.remove('show');
 }
 
-function onRemoteChange(payload){
-  // Debounce para no spamear si hay varios cambios simultáneos
+// ═══════════════════════════════════════════════════════════
+// REALTIME — escucha cambios de otros dispositivos en tiempo real
+// ═══════════════════════════════════════════════════════════
+function subscribeRealtime() {
+  if (!sbClient || rtChan) return;
+  console.log('[IngenIA] Subscribing to Realtime...');
+  try {
+    rtChan = sbClient
+      .channel('ingenia-changes')
+      .on('postgres_changes', {event:'*', schema:'public', table:'ingenia_modules'}, handleRemoteChange)
+      .on('postgres_changes', {event:'*', schema:'public', table:'ingenia_classes'},  handleRemoteChange)
+      .on('postgres_changes', {event:'*', schema:'public', table:'ingenia_meta'},     handleRemoteChange)
+      .subscribe(function(status) {
+        console.log('[IngenIA] Realtime status:', status);
+        if (status === 'SUBSCRIBED') {
+          const ind = document.getElementById('rt-ind');
+          if (ind) ind.style.display = '';
+          logChange('⚡ Realtime conectado');
+        }
+      });
+  } catch(e) {
+    console.error('[IngenIA] Realtime subscribe error:', e);
+  }
+}
+
+function handleRemoteChange(payload) {
+  console.log('[IngenIA] Remote change detected:', payload.eventType, payload.table);
   clearTimeout(_pullDebounce);
-  _pullDebounce = setTimeout(()=>{
-    document.getElementById('ban-pull-txt').textContent =
-      `Actualización detectada desde otro dispositivo (${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}).`;
-    document.getElementById('ban-pull').style.display='flex';
-  }, 1200);
+  _pullDebounce = setTimeout(function() {
+    const el = document.getElementById('ban-pull-txt');
+    if (el) el.textContent = 'Actualización desde otro dispositivo (' +
+      new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) + ')';
+    const ban = document.getElementById('ban-pull');
+    if (ban) ban.style.display = 'flex';
+  }, 1000);
 }
 
-async function manualPull(){
-  document.getElementById('ban-pull').style.display='none';
-  await pull();
-}
-
-// ═══════════════════════════════════════════════════════════════
-// PUSH — sube todo a Supabase incluyendo deletes
-// ═══════════════════════════════════════════════════════════════
-async function push(){
-  if(!sbOk||!sb){ toast('⚠ Sin conexión Supabase', true); return; }
+// ═══════════════════════════════════════════════════════════
+// UPLOAD — sube TODO a Supabase, incluyendo deletes
+// ═══════════════════════════════════════════════════════════
+async function doUpload() {
+  if (!sbReady || !sbClient) {
+    toast('⚠ Supabase no conectado', true);
+    return;
+  }
   setSS('syncing');
-  try{
+  console.log('[IngenIA] Uploading to Supabase...');
+  try {
     const now = new Date().toISOString();
 
     // 1. Upsert modules
-    const modRows = modules.map((m,i)=>({id:m.id,num:m.num,color:m.color,title:m.title,sub:m.sub||'',position:i,updated_at:now}));
-    const {error:me} = await sb.from('ingenia_modules').upsert(modRows,{onConflict:'id'});
-    if(me) throw me;
+    const modRows = modules.map(function(m, i) {
+      return {id:m.id, num:m.num||'', color:m.color||'#333', title:m.title||'', sub:m.sub||'', position:i, updated_at:now};
+    });
+    const r1 = await sbClient.from('ingenia_modules').upsert(modRows, {onConflict:'id'});
+    if (r1.error) throw new Error('modules upsert: ' + r1.error.message);
 
-    // ← FIX #3: delete módulos que ya no existen localmente
-    const {data:remMods} = await sb.from('ingenia_modules').select('id');
-    const localModIds = new Set(modules.map(m=>m.id));
-    const toDelMods = (remMods||[]).filter(r=>!localModIds.has(r.id)).map(r=>r.id);
-    if(toDelMods.length){
-      const {error:dme} = await sb.from('ingenia_modules').delete().in('id',toDelMods);
-      if(dme) throw dme;
+    // 2. Delete removed modules (those in Supabase but not locally)
+    const r2 = await sbClient.from('ingenia_modules').select('id');
+    if (!r2.error && r2.data) {
+      const localIds = new Set(modules.map(function(m){return m.id;}));
+      const toDelete = r2.data.filter(function(r){return !localIds.has(r.id);}).map(function(r){return r.id;});
+      if (toDelete.length > 0) {
+        console.log('[IngenIA] Deleting removed modules:', toDelete);
+        const rd = await sbClient.from('ingenia_modules').delete().in('id', toDelete);
+        if (rd.error) console.warn('[IngenIA] Module delete error:', rd.error.message);
+      }
     }
 
-    // 2. Upsert clases
-    const clsRows=[];
-    modules.forEach(m=>m.classes.forEach((c,i)=>{
-      clsRows.push({id:c.id,module_id:m.id,num:c.num,title:c.title,description:c.desc||'',duration:c.dur||'',status:c.status,checked:!!checked[c.id],position:i,updated_at:now});
-    }));
-    if(clsRows.length){
-      const {error:ce} = await sb.from('ingenia_classes').upsert(clsRows,{onConflict:'id'});
-      if(ce) throw ce;
+    // 3. Upsert all classes
+    var clsRows = [];
+    modules.forEach(function(m) {
+      m.classes.forEach(function(c, i) {
+        clsRows.push({
+          id: c.id,
+          module_id: m.id,
+          num: c.num||'',
+          title: c.title||'',
+          description: c.desc||'',
+          duration: c.dur||'',
+          status: c.status||'pendiente',
+          checked: !!checked[c.id],
+          position: i,
+          updated_at: now
+        });
+      });
+    });
+    if (clsRows.length > 0) {
+      const r3 = await sbClient.from('ingenia_classes').upsert(clsRows, {onConflict:'id'});
+      if (r3.error) throw new Error('classes upsert: ' + r3.error.message);
     }
 
-    // ← FIX #3: delete clases que ya no existen localmente
-    const {data:remCls} = await sb.from('ingenia_classes').select('id');
-    const localClsIds = new Set(modules.flatMap(m=>m.classes.map(c=>c.id)));
-    const toDelCls = (remCls||[]).filter(r=>!localClsIds.has(r.id)).map(r=>r.id);
-    if(toDelCls.length){
-      const {error:dce} = await sb.from('ingenia_classes').delete().in('id',toDelCls);
-      if(dce) throw dce;
+    // 4. Delete removed classes
+    const r4 = await sbClient.from('ingenia_classes').select('id');
+    if (!r4.error && r4.data) {
+      const localClsIds = new Set(modules.flatMap(function(m){return m.classes.map(function(c){return c.id;});}));
+      const toDelCls = r4.data.filter(function(r){return !localClsIds.has(r.id);}).map(function(r){return r.id;});
+      if (toDelCls.length > 0) {
+        console.log('[IngenIA] Deleting removed classes:', toDelCls);
+        const rdc = await sbClient.from('ingenia_classes').delete().in('id', toDelCls);
+        if (rdc.error) console.warn('[IngenIA] Class delete error:', rdc.error.message);
+      }
     }
 
-    // 3. Upsert notas
-    const {error:ne} = await sb.from('ingenia_meta').upsert([{key:'notes',value:notes,updated_at:now}],{onConflict:'key'});
-    if(ne) throw ne;
+    // 5. Upsert notes (in ingenia_meta table)
+    const r5 = await sbClient.from('ingenia_meta').upsert(
+      [{key:'notes', value:notes, updated_at:now}],
+      {onConflict:'key'}
+    );
+    // If ingenia_meta doesn't exist yet, log but don't fail
+    if (r5.error) console.warn('[IngenIA] meta upsert (notes):', r5.error.message);
 
-    document.getElementById('ban-pending').style.display='none';
-    setSS('synced'); setLastSync();
-    toast('☁ Sincronizado');
-  }catch(e){
+    document.getElementById('ban-pending').style.display = 'none';
+    setSS('synced');
+    setLastSync();
+    logChange('☁ Subido a Supabase');
+    toast('☁ Sincronizado correctamente');
+    console.log('[IngenIA] Upload complete');
+  } catch(e) {
     setSS('error');
-    toast('❌ Error sync: '+e.message, true);
+    showErr(e.message);
+    toast('❌ Error: ' + e.message, true);
+    console.error('[IngenIA] Upload error:', e);
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// PULL — descarga desde Supabase
-// ═══════════════════════════════════════════════════════════════
-async function pull(){
-  if(!sb) return;
+// ═══════════════════════════════════════════════════════════
+// PULL — descarga desde Supabase (cada tabla independiente)
+// ═══════════════════════════════════════════════════════════
+async function doPull() {
+  if (!sbClient) return;
   setSS('syncing');
-  try{
-    const [{data:mods,error:me},{data:clss,error:ce},{data:meta}] = await Promise.all([
-      sb.from('ingenia_modules').select('*').order('position'),
-      sb.from('ingenia_classes').select('*').order('position'),
-      sb.from('ingenia_meta').select('*'),
+  console.log('[IngenIA] Pulling from Supabase...');
+  try {
+    // Each query is independent — if one fails, others still work
+    const [modsRes, clssRes, metaRes] = await Promise.allSettled([
+      sbClient.from('ingenia_modules').select('*').order('position'),
+      sbClient.from('ingenia_classes').select('*').order('position'),
+      sbClient.from('ingenia_meta').select('*'),
     ]);
-    if(me) throw me; if(ce) throw ce;
 
-    if(!mods||mods.length===0){
-      // Supabase vacío → subir datos locales
-      setSS('synced'); setLastSync();
+    // Check modules
+    if (modsRes.status === 'rejected' || modsRes.value.error) {
+      const err = modsRes.status === 'rejected' ? modsRes.reason : modsRes.value.error;
+      throw new Error('modules select: ' + (err.message || err));
+    }
+    const mods = modsRes.value.data || [];
+
+    // Check classes
+    if (clssRes.status === 'rejected' || clssRes.value.error) {
+      const err = clssRes.status === 'rejected' ? clssRes.reason : clssRes.value.error;
+      throw new Error('classes select: ' + (err.message || err));
+    }
+    const clss = clssRes.value.data || [];
+
+    // Meta is optional — don't throw if it fails
+    let meta = [];
+    if (metaRes.status === 'fulfilled' && !metaRes.value.error) {
+      meta = metaRes.value.data || [];
+    } else {
+      const metaErr = metaRes.status === 'rejected' ? metaRes.reason : metaRes.value?.error;
+      console.warn('[IngenIA] meta table not available (run SQL to create it):', metaErr?.message || metaErr);
+    }
+
+    console.log('[IngenIA] Pulled:', mods.length, 'modules,', clss.length, 'classes');
+
+    if (mods.length === 0) {
+      // Supabase is empty — upload local data
+      setSS('synced');
+      setLastSync();
+      console.log('[IngenIA] Supabase empty — uploading local data');
       toast('ℹ Supabase vacío — subiendo datos locales...');
-      await push();
+      await doUpload();
       return;
     }
 
-    modules = mods.map(m=>({
-      id:m.id, num:m.num, color:m.color, title:m.title, sub:m.sub||'',
-      classes:(clss||[])
-        .filter(c=>c.module_id===m.id)
-        .sort((a,b)=>a.position-b.position)
-        .map(c=>({id:c.id,num:c.num,title:c.title,desc:c.description||'',dur:c.duration||'',status:c.status}))
-    }));
+    // Rebuild modules from Supabase data
+    const newModules = mods.map(function(m) {
+      return {
+        id: m.id,
+        num: m.num || '',
+        color: m.color || '#333',
+        title: m.title || '',
+        sub: m.sub || '',
+        classes: clss
+          .filter(function(c) { return c.module_id === m.id; })
+          .sort(function(a,b) { return (a.position||0) - (b.position||0); })
+          .map(function(c) {
+            return {
+              id: c.id,
+              num: c.num || '',
+              title: c.title || '',
+              desc: c.description || '',
+              dur: c.duration || '',
+              status: c.status || 'pendiente'
+            };
+          })
+      };
+    });
 
-    checked={};
-    (clss||[]).forEach(c=>{ if(c.checked) checked[c.id]=true; });
+    // Rebuild checked
+    const newChecked = {};
+    clss.forEach(function(c) { if (c.checked) newChecked[c.id] = true; });
 
-    const nr=(meta||[]).find(r=>r.key==='notes');
-    if(nr){ notes=nr.value||''; document.getElementById('gn').value=notes; }
-
-    saveLocal(); render();
-    setSS('synced'); setLastSync();
-    logChange('☁ Datos sincronizados desde Supabase');
-    toast('☁ Datos actualizados');
-  }catch(e){
-    setSS('error');
-    toast('❌ Error al cargar: '+e.message, true);
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// MARK CHANGED — guarda local + auto-sync a Supabase
-// ═══════════════════════════════════════════════════════════════
-function markChanged(msg){
-  saveLocal();
-  if(msg) logChange(msg);
-  if(sbOk){
-    document.getElementById('ban-pending').style.display='flex';
-    clearTimeout(_autoSync);
-    _autoSync = setTimeout(push, 3000); // auto-push después de 3s de inactividad
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// TIMER
-// ═══════════════════════════════════════════════════════════════
-function toggleTimer(){
-  timerRun=!timerRun;
-  document.getElementById('tbtn').textContent=timerRun?'⏸':'▶';
-  document.getElementById('tdisp').classList.toggle('run',timerRun);
-  if(timerRun){
-    timerInt=setInterval(()=>{ timerSec++; updateTimer(); },1000);
-  } else {
-    clearInterval(timerInt);
-    if(timerSec>0) toast(`🎬 Sesión: ${fmt(timerSec)}`);
-  }
-}
-function resetTimer(){ timerRun=false; timerSec=0; clearInterval(timerInt); document.getElementById('tdisp').textContent='00:00'; document.getElementById('tdisp').classList.remove('run'); document.getElementById('tbtn').textContent='▶'; }
-function fmt(s){ return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
-function updateTimer(){ document.getElementById('tdisp').textContent=fmt(timerSec); }
-
-// ═══════════════════════════════════════════════════════════════
-// READONLY
-// ═══════════════════════════════════════════════════════════════
-function toggleRO(){
-  readonly=!readonly;
-  document.body.classList.toggle('readonly',readonly);
-  document.getElementById('ro-btn').style.color=readonly?'var(--c3)':'';
-  toast(readonly?'👁 Modo lectura — sin ediciones':'✏ Edición activada');
-}
-
-// ═══════════════════════════════════════════════════════════════
-// IMPORT / EXPORT
-// ═══════════════════════════════════════════════════════════════
-function exportJSON(){
-  const d={version:4,date:new Date().toISOString(),modules,checked,notes};
-  const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
-  const u=URL.createObjectURL(b), a=document.createElement('a');
-  a.href=u; a.download=`IngenIA_${new Date().toISOString().slice(0,10)}.json`; a.click();
-  URL.revokeObjectURL(u); toast('💾 JSON exportado');
-}
-function importJSON(e){
-  const f=e.target.files[0]; if(!f) return;
-  const r=new FileReader();
-  r.onload=ev=>{
-    try{
-      const d=JSON.parse(ev.target.result);
-      if(!confirm(`¿Restaurar progreso del ${d.date?new Date(d.date).toLocaleDateString('es-CO'):'desconocida'}?`)) return;
-      if(d.modules) modules=d.modules;
-      if(d.checked) checked=d.checked;
-      if(d.notes!=null){ notes=d.notes; document.getElementById('gn').value=notes; }
-      markChanged('📂 JSON importado');
-      render(); toast('📂 Importado correctamente');
-    }catch{ toast('❌ Archivo inválido',true); }
-  };
-  r.readAsText(f); e.target.value='';
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SUPABASE CONFIG MODAL
-// ═══════════════════════════════════════════════════════════════
-function openSbConfig(){
-  openModal(`
-    <h3>⚡ Configurar Supabase</h3>
-    <p>Usa las mismas credenciales en todos tus dispositivos para sincronizar automáticamente.</p>
-    <div class="mf">
-      <label class="ml">Project URL</label>
-      <input class="mi" id="sb-u" placeholder="https://xxx.supabase.co" value="${escH(SB_URL)}">
-    </div>
-    <div class="mf">
-      <label class="ml">Anon Key</label>
-      <input class="mi" id="sb-k" type="password" value="${escH(SB_KEY)}">
-    </div>
-    <div class="mf">
-      <label class="ml">SQL para crear las tablas (ejecutar una sola vez)</label>
-      <div class="mc">create table if not exists ingenia_modules (
-  id text primary key, num text, color text,
-  title text, sub text, position int default 0,
-  updated_at timestamptz default now()
-);
-create table if not exists ingenia_classes (
-  id text primary key,
-  module_id text references ingenia_modules(id) on delete cascade,
-  num text, title text, description text,
-  duration text, status text default 'pendiente',
-  checked boolean default false,
-  position int default 0,
-  updated_at timestamptz default now()
-);
-create table if not exists ingenia_meta (
-  key text primary key, value text,
-  updated_at timestamptz default now()
-);
-alter table ingenia_modules enable row level security;
-alter table ingenia_classes  enable row level security;
-alter table ingenia_meta     enable row level security;
-create policy "open" on ingenia_modules for all using(true) with check(true);
-create policy "open" on ingenia_classes  for all using(true) with check(true);
-create policy "open" on ingenia_meta     for all using(true) with check(true);
--- ⚠ Dashboard › Database › Replication: activa las 3 tablas para Realtime</div>
-    </div>
-    <div class="ma">
-      <button class="btn btn-x" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-b" onclick="sbDoPull()">☁ Conectar y Cargar</button>
-      <button class="btn btn-p" onclick="sbConnect()">🔌 Solo Conectar</button>
-    </div>
-  `);
-}
-function sbSaveCreds(){
-  SB_URL=document.getElementById('sb-u').value.trim();
-  SB_KEY=document.getElementById('sb-k').value.trim();
-  localStorage.setItem('sb_url',SB_URL); localStorage.setItem('sb_key',SB_KEY);
-  sb=null; sbOk=false; rtChan=null;
-}
-function sbConnect(){ sbSaveCreds(); closeModal(); initSupabase(); }
-function sbDoPull(){ sbSaveCreds(); closeModal(); initSupabase(); }
-
-// ═══════════════════════════════════════════════════════════════
-// MODULE ACTIONS
-// ═══════════════════════════════════════════════════════════════
-function openAddMod(){
-  if(readonly) return;
-  const sw=COLORS.map((c,i)=>`<div class="cs${i===0?' sel':''}" style="background:${c}" data-color="${c}" onclick="pickColor(this)"></div>`).join('');
-  openModal(`
-    <h3>➕ Nuevo Módulo</h3>
-    <div class="mf"><label class="ml">Número / ID</label><input class="mi" id="m-n" placeholder="4, Extra, Bonus…"></div>
-    <div class="mf"><label class="ml">Título</label><input class="mi" id="m-t" placeholder="ej: Casos de Estudio"></div>
-    <div class="mf"><label class="ml">Subtítulo</label><input class="mi" id="m-s" placeholder="ej: Requiere Nivel 4"></div>
-    <div class="mf"><label class="ml">Color del badge</label><div class="cg">${sw}</div><input type="hidden" id="m-c" value="${COLORS[0]}"></div>
-    <div class="ma"><button class="btn btn-x" onclick="closeModal()">Cancelar</button><button class="btn btn-p" onclick="confAddMod()">Crear módulo</button></div>
-  `);
-}
-function pickColor(el){ document.querySelectorAll('.cs').forEach(s=>s.classList.remove('sel')); el.classList.add('sel'); document.getElementById('m-c').value=el.dataset.color; }
-function confAddMod(){
-  const num=document.getElementById('m-n').value.trim(), title=document.getElementById('m-t').value.trim();
-  if(!title){ toast('❌ Título requerido',true); return; }
-  const sub=document.getElementById('m-s').value.trim(), color=document.getElementById('m-c').value;
-  modules.push({id:'m_'+Date.now(),num:num||String(modules.length),color,title,sub:sub||'Nuevo módulo',classes:[]});
-  markChanged(`➕ Módulo creado: ${title}`); render(); closeModal(); toast('✅ Módulo creado');
-}
-function delMod(id){
-  if(readonly) return;
-  const m=modules.find(x=>x.id===id); if(!m) return;
-  openModal(`<h3>🗑 Eliminar módulo</h3><p>¿Eliminar <strong style="color:var(--white)">${escH(m.title)}</strong> y sus ${m.classes.length} clases? No se puede deshacer.</p><div class="ma"><button class="btn btn-x" onclick="closeModal()">Cancelar</button><button class="btn btn-r" onclick="confDelMod('${id}')">Sí, eliminar</button></div>`);
-}
-function confDelMod(id){
-  const m=modules.find(x=>x.id===id), title=m?.title||id;
-  modules=modules.filter(x=>x.id!==id);
-  markChanged(`🗑 Módulo eliminado: ${title}`); render(); closeModal(); toast('🗑 Módulo eliminado');
-}
-function updModTitle(id,v){ const m=modules.find(x=>x.id===id); if(m&&v.trim()){ m.title=v.trim(); markChanged(`✏ Módulo: ${v.trim()}`); } }
-
-// ═══════════════════════════════════════════════════════════════
-// CLASS ACTIONS
-// ═══════════════════════════════════════════════════════════════
-function openAddCls(modId){
-  if(readonly) return;
-  const mo=modules.map(m=>`<option value="${m.id}"${m.id===modId?' selected':''}>${m.num} — ${escH(m.title)}</option>`).join('');
-  const so=Object.entries(ST).map(([k,v])=>`<option value="${k}"${k==='pendiente'?' selected':''}>${v.label}</option>`).join('');
-  openModal(`
-    <h3>➕ Nueva Clase</h3>
-    <div class="mf"><label class="ml">Módulo destino</label><select class="ms" id="c-m">${mo}</select></div>
-    <div class="mf"><label class="ml">Título</label><input class="mi" id="c-t" placeholder="ej: Intro a Kling AI 2.5"></div>
-    <div class="mf"><label class="ml">Descripción</label><textarea class="mta" id="c-d" placeholder="Qué cubre esta clase..."></textarea></div>
-    <div style="display:flex;gap:10px">
-      <div class="mf" style="flex:1"><label class="ml">Duración</label><input class="mi" id="c-dr" placeholder="8 min"></div>
-      <div class="mf" style="flex:1"><label class="ml">Estado</label><select class="ms" id="c-s">${so}</select></div>
-    </div>
-    <div class="ma"><button class="btn btn-x" onclick="closeModal()">Cancelar</button><button class="btn btn-g" onclick="confAddCls()">Añadir clase</button></div>
-  `);
-}
-function confAddCls(){
-  const modId=document.getElementById('c-m').value, title=document.getElementById('c-t').value.trim();
-  if(!title){ toast('❌ Título requerido',true); return; }
-  const m=modules.find(x=>x.id===modId); if(!m) return;
-  const desc=document.getElementById('c-d').value.trim(), dur=document.getElementById('c-dr').value.trim()||'— min', status=document.getElementById('c-s').value;
-  m.classes.push({id:modId+'_c'+Date.now(),num:'C'+(m.classes.length+1),title,desc,dur,status});
-  markChanged(`➕ Clase añadida: ${title}`); render(); closeModal(); toast('✅ Clase añadida');
-}
-
-// Quick add inline
-function toggleQA(modId){ if(readonly) return; const el=document.getElementById('qa-'+modId); el?.classList.toggle('open'); if(el?.classList.contains('open')) document.getElementById('qai-'+modId)?.focus(); }
-function commitQA(modId){
-  const inp=document.getElementById('qai-'+modId), title=(inp?.value||'').trim();
-  if(!title) return;
-  const m=modules.find(x=>x.id===modId); if(!m) return;
-  const status=document.getElementById('qas-'+modId)?.value||'pendiente';
-  m.classes.push({id:modId+'_c'+Date.now(),num:'C'+(m.classes.length+1),title,desc:'',dur:'— min',status});
-  markChanged(`➕ Clase (rápida): ${title}`); render(); toast('✅ '+title);
-}
-
-function delCls(modId,clsId){
-  if(readonly) return;
-  const cls=modules.find(m=>m.id===modId)?.classes.find(c=>c.id===clsId); if(!cls) return;
-  openModal(`<h3>🗑 Eliminar clase</h3><p>¿Eliminar <strong style="color:var(--white)">${escH(cls.title)}</strong>?</p><div class="ma"><button class="btn btn-x" onclick="closeModal()">Cancelar</button><button class="btn btn-r" onclick="confDelCls('${modId}','${clsId}')">Sí, eliminar</button></div>`);
-}
-function confDelCls(modId,clsId){
-  const m=modules.find(x=>x.id===modId); if(!m) return;
-  const cls=m.classes.find(c=>c.id===clsId), title=cls?.title||clsId;
-  m.classes=m.classes.filter(c=>c.id!==clsId); delete checked[clsId];
-  markChanged(`🗑 Clase eliminada: ${title}`); render(); closeModal(); toast('🗑 Eliminada');
-}
-
-function toggleCheck(clsId){
-  if(readonly) return;
-  checked[clsId]=!checked[clsId];
-  const cls=modules.flatMap(m=>m.classes).find(c=>c.id===clsId);
-  markChanged(checked[clsId]?`✅ Grabada: ${cls?.title}`:`↩ Desmarcada: ${cls?.title}`);
-  render(); toast(checked[clsId]?'✅ Grabada':'↩ Desmarcada');
-}
-
-function updField(modId,clsId,field,val){
-  if(readonly) return;
-  const cls=modules.find(m=>m.id===modId)?.classes.find(c=>c.id===clsId); if(!cls) return;
-  cls[field]=val;
-  if(field==='status') markChanged(`🔄 ${cls.title}: ${val}`);
-  else markChanged(null);
-  if(field==='status') render();
-}
-
-function moveCls(fromId,clsId,toId){
-  if(readonly||fromId===toId) return;
-  const from=modules.find(m=>m.id===fromId), to=modules.find(m=>m.id===toId); if(!from||!to) return;
-  const cls=from.classes.find(c=>c.id===clsId); if(!cls) return;
-  from.classes=from.classes.filter(c=>c.id!==clsId); to.classes.push(cls);
-  markChanged(`📦 ${cls.title} → ${to.title}`); render(); toast(`📦 Movida a ${to.title}`);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// DRAG & DROP
-// ═══════════════════════════════════════════════════════════════
-function dStart(e,mId,cId){ if(readonly){e.preventDefault();return;} dragData={mId,cId}; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',cId); setTimeout(()=>document.getElementById('row-'+cId)?.classList.add('dragging'),0); }
-function dEnd(e,cId){ document.querySelectorAll('.cls-row').forEach(r=>r.classList.remove('dragging','dot','dob')); document.querySelectorAll('.module').forEach(m=>m.classList.remove('dov')); dragData=null; }
-function dOver(e,mId,cId){ if(!dragData) return; e.preventDefault(); document.querySelectorAll('.cls-row').forEach(r=>r.classList.remove('dot','dob')); const rect=e.currentTarget.getBoundingClientRect(); e.currentTarget.classList.add(e.clientY<rect.top+rect.height/2?'dot':'dob'); }
-function dDrop(e,toMId,tId){ e.preventDefault(); if(!dragData) return; document.querySelectorAll('.cls-row').forEach(r=>r.classList.remove('dot','dob')); const {mId:fromMId,cId}=dragData; if(cId===tId) return; const from=modules.find(m=>m.id===fromMId), to=modules.find(m=>m.id===toMId); if(!from||!to) return; const cls=from.classes.find(c=>c.id===cId); if(!cls) return; from.classes=from.classes.filter(c=>c.id!==cId); const ti=to.classes.findIndex(c=>c.id===tId); const rect=document.getElementById('row-'+tId)?.getBoundingClientRect(); const after=rect&&e.clientY>rect.top+rect.height/2; to.classes.splice(after?ti+1:ti,0,cls); markChanged(`↕ ${cls.title} reordenada`); render(); toast(fromMId===toMId?'↕ Reordenada':'📦 Movida'); }
-function mdOver(e,mId){ if(!dragData) return; e.preventDefault(); document.querySelectorAll('.module').forEach(m=>m.classList.remove('dov')); document.getElementById('mod-'+mId)?.classList.add('dov'); }
-function mdDrop(e,toMId){ e.preventDefault(); document.querySelectorAll('.module').forEach(m=>m.classList.remove('dov')); if(!dragData||dragData.mId===toMId) return; moveCls(dragData.mId,dragData.cId,toMId); }
-
-// ═══════════════════════════════════════════════════════════════
-// UI HELPERS
-// ═══════════════════════════════════════════════════════════════
-function toggleCollapse(id){ collapsed[id]=!collapsed[id]; render(); }
-function setF(f,btn){ flt=f; document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); render(); }
-function notesChanged(){ notes=document.getElementById('gn').value; markChanged(null); }
-function openModal(html){ document.getElementById('mbox').innerHTML=html; document.getElementById('modal').style.display='flex'; setTimeout(()=>{ const f=document.querySelector('#mbox input,#mbox textarea'); if(f) f.focus(); },50); }
-function closeModal(){ document.getElementById('modal').style.display='none'; }
-let _tt;
-function toast(msg,err=false,warn=false){ const el=document.getElementById('toast'); el.textContent=msg; el.className='toast show'+(err?' err':warn?' warn':''); clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2800); }
-function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-// ═══════════════════════════════════════════════════════════════
-// STATS + TOTAL TIME
-// ═══════════════════════════════════════════════════════════════
-function parseMins(dur){ if(!dur) return 0; const m=dur.match(/(\d+(?:\.\d+)?)/); return m?parseFloat(m[1]):0; }
-function updateStats(){
-  let tot=0,dn=0,urg=0,pend=0,star=0,mins=0;
-  modules.forEach(m=>m.classes.forEach(c=>{ tot++; mins+=parseMins(c.dur); if(checked[c.id]) dn++; if(c.status==='urgente') urg++; if(['pendiente','urgente'].includes(c.status)) pend++; if(c.status==='estrella') star++; }));
-  const pct=tot?Math.round(dn/tot*100):0;
-  document.getElementById('gp-bar').style.width=pct+'%';
-  document.getElementById('gp-count').textContent=`${dn}/${tot}`;
-  const tt=document.getElementById('total-time');
-  if(tt){ const h=Math.floor(mins/60),m2=Math.round(mins%60); tt.textContent=h?`${h}h ${m2}min`:`${m2} min`; }
-  document.getElementById('stats-row').innerHTML=`
-    <div class="stat"><div class="stat-icon" style="background:rgba(0,251,156,.1)">✅</div><div><div class="stat-num" style="color:var(--c1)">${dn}</div><div class="stat-lbl">Grabadas</div></div></div>
-    <div class="stat"><div class="stat-icon" style="background:rgba(255,255,255,.05)">📋</div><div><div class="stat-num" style="color:var(--white)">${tot}</div><div class="stat-lbl">Total</div></div></div>
-    <div class="stat"><div class="stat-icon" style="background:rgba(233,69,96,.1)">🔴</div><div><div class="stat-num" style="color:var(--red)">${urg}</div><div class="stat-lbl">Urgentes</div></div></div>
-    <div class="stat"><div class="stat-icon" style="background:rgba(245,166,35,.1)">⏳</div><div><div class="stat-num" style="color:var(--gold)">${pend}</div><div class="stat-lbl">Pendientes</div></div></div>
-    <div class="stat"><div class="stat-icon" style="background:rgba(245,166,35,.1)">⭐</div><div><div class="stat-num" style="color:var(--gold)">${star}</div><div class="stat-lbl">Estrellas</div></div></div>
-    <div class="stat"><div class="stat-icon" style="background:rgba(101,100,233,.1)">📊</div><div><div class="stat-num" style="color:var(--c3)">${pct}%</div><div class="stat-lbl">Completado</div></div></div>
-  `;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// RENDER
-// ═══════════════════════════════════════════════════════════════
-function render(){
-  const mc=document.getElementById('mc');
-  const q=(document.getElementById('si')?.value||'').toLowerCase().trim();
-  mc.innerHTML='';
-  modules.forEach(mod=>{
-    let cls=mod.classes;
-    if(flt!=='all') cls=cls.filter(c=>c.status===flt);
-    if(q) cls=cls.filter(c=>c.title.toLowerCase().includes(q)||(c.desc||'').toLowerCase().includes(q));
-    const tot=mod.classes.length, dn=mod.classes.filter(c=>checked[c.id]).length;
-    const pct=tot?Math.round(dn/tot*100):0, isC=!!collapsed[mod.id];
-    const oth=modules.filter(m=>m.id!==mod.id);
-
-    const el=document.createElement('div');
-    el.className='module'+(isC?' collapsed':'');
-    el.id='mod-'+mod.id;
-    el.addEventListener('dragover',e=>mdOver(e,mod.id));
-    el.addEventListener('drop',e=>mdDrop(e,mod.id));
-
-    el.innerHTML=`
-      <div class="mod-hdr" onclick="toggleCollapse('${mod.id}')">
-        <span class="m-handle" onclick="event.stopPropagation()">⠿</span>
-        <div class="mbadge" style="background:${mod.color}">${mod.num}</div>
-        <div class="minfo">
-          <input class="m-title-i" value="${escH(mod.title)}" onclick="event.stopPropagation()" onchange="updModTitle('${mod.id}',this.value)" oninput="event.stopPropagation()">
-          <div class="m-sub">${escH(mod.sub)}</div>
-        </div>
-        <div class="m-right">
-          <div class="m-acts" onclick="event.stopPropagation()">
-            <button class="m-act" onclick="openAddCls('${mod.id}')">＋ Clase</button>
-            <button class="m-act" onclick="toggleQA('${mod.id}')" title="Añadir clase rápida">⚡</button>
-            <button class="m-act del" onclick="delMod('${mod.id}')">🗑</button>
-          </div>
-          <div class="m-pb"><div class="m-pf" style="width:${pct}%;background:${mod.color}"></div></div>
-          <span class="m-pt">${dn}/${tot}</span>
-          <span class="chevron">▾</span>
-        </div>
-      </div>`;
-
-    const list=document.createElement('div');
-    list.className='cls-list';
-
-    if(cls.length===0){
-      const emp=document.createElement('div');
-      emp.className='empty'; emp.textContent=q?'Sin resultados.':'Sin clases con este filtro.';
-      list.appendChild(emp);
-    } else {
-      cls.forEach(c=>{
-        const isChk=!!checked[c.id], st=ST[c.status]||ST.pendiente;
-        const mv=oth.length&&!readonly?`<select class="mv-s" onchange="moveCls('${mod.id}','${c.id}',this.value);this.value=''" title="Mover a otro módulo"><option value="">↗ Mover...</option>${oth.map(m=>`<option value="${m.id}">${m.num}—${escH(m.title)}</option>`).join('')}</select>`:'';
-        const row=document.createElement('div');
-        row.className=`cls-row s-${c.status}`; row.id='row-'+c.id;
-        row.setAttribute('draggable','true');
-        row.addEventListener('dragstart',e=>dStart(e,mod.id,c.id));
-        row.addEventListener('dragend',  e=>dEnd(e,c.id));
-        row.addEventListener('dragover', e=>dOver(e,mod.id,c.id));
-        row.addEventListener('drop',     e=>dDrop(e,mod.id,c.id));
-        row.innerHTML=`
-          <span class="c-handle">⠿</span>
-          <div class="c-chk${isChk?' checked':''}" onclick="toggleCheck('${c.id}')"></div>
-          <div class="c-num">${escH(c.num)}</div>
-          <div class="c-body">
-            <div class="c-tr">
-              <input class="c-ti" value="${escH(c.title)}" draggable="false" onchange="updField('${mod.id}','${c.id}','title',this.value)" onclick="event.stopPropagation()">
-              <span class="badge ${st.cls}">${st.label}</span>
-            </div>
-            <textarea class="c-de" rows="2" draggable="false" onchange="updField('${mod.id}','${c.id}','desc',this.value)" onclick="event.stopPropagation()">${escH(c.desc||'')}</textarea>
-          </div>
-          <div class="c-ctrl">
-            <select class="st-s" onchange="updField('${mod.id}','${c.id}','status',this.value)">${Object.entries(ST).map(([k,v])=>`<option value="${k}"${c.status===k?' selected':''}>${v.label}</option>`).join('')}</select>
-            <input class="dur-i" value="${escH(c.dur||'')}" title="Duración estimada" draggable="false" onchange="updField('${mod.id}','${c.id}','dur',this.value)">
-            ${mv}
-            <button class="c-del" onclick="delCls('${mod.id}','${c.id}')">🗑</button>
-          </div>`;
-        list.appendChild(row);
-      });
+    // Notes from meta
+    const notesRow = meta.find(function(r) { return r.key === 'notes'; });
+    if (notesRow && notesRow.value != null) {
+      notes = notesRow.value;
+      const gnEl = document.getElementById('gn');
+      if (gnEl) gnEl.value = notes;
     }
 
-    // Quick add row
-    const qao=Object.entries(ST).map(([k,v])=>`<option value="${k}"${k==='pendiente'?' selected':''}>${v.label}</option>`).join('');
-    const qa=document.createElement('div');
-    qa.className='quickadd'; qa.id='qa-'+mod.id;
-    qa.innerHTML=`<input class="qa-i" id="qai-${mod.id}" placeholder="Título rápido... (Enter para añadir)" onkeydown="if(event.key==='Enter')commitQA('${mod.id}')"><select class="qa-s" id="qas-${mod.id}">${qao}</select><button class="btn btn-g btn-sm" onclick="commitQA('${mod.id}')">Añadir</button><button class="btn btn-x btn-sm" onclick="toggleQA('${mod.id}')">✕</button>`;
-    list.appendChild(qa);
+    // Apply and render
+    modules = newModules;
+    checked = newChecked;
+    saveLocal();
+    render();
 
-    const ab=document.createElement('button');
-    ab.className='add-cls-btn'; ab.textContent=' Añadir clase';
-    ab.onclick=()=>openAddCls(mod.id);
-    list.appendChild(ab);
+    setSS('synced');
+    setLastSync();
+    logChange('☁ Datos cargados desde Supabase (' + mods.length + ' módulos)');
+    toast('☁ Datos actualizados');
+    hideErr();
+    console.log('[IngenIA] Pull complete');
 
-    el.appendChild(list);
-    mc.appendChild(el);
-  });
-  updateStats();
+  } catch(e) {
+    setSS('error');
+    showErr(e.message);
+    toast('❌ Error al cargar: ' + e.message, true);
+    console.error('[IngenIA] Pull error:', e);
+    // Render local data anyway
+    render();
+  }
 }
 
-// ═══════════════════════════════════════════════════════════════
+async function doForcePull() {
+  document.getElementById('ban-pull').style.display = 'none';
+  await doPull();
+}
+
+// ═══════════════════════════════════════════════════════════
+// SYNC STATUS
+// ═══════════════════════════════════════════════════════════
+function setSS(s) {
+  const b = document.getElementById('sync-badge');
+  const d = document.getElementById('sdot');
+  const l = document.getElementById('slbl');
+  if (!b || !d || !l) return;
+  b.className = 'sync-badge ' + s;
+  d.className = 'sdot' + (s === 'syncing' ? ' pulse' : '');
+  l.textContent = {local:'Local', synced:'Sincronizado', syncing:'Sincronizando...', error:'Error BD'}[s] || s;
+}
+
+function setLastSync() {
+  const el = document.getElementById('last-sync');
+  if (el) el.textContent = new Date().toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+
+// ═══════════════════════════════════════════════════════════
+// MARK CHANGED — guarda local + dispara auto-upload
+// ═══════════════════════════════════════════════════════════
+function markChanged(msg) {
+  saveLocal();
+  if (msg) logChange(msg);
+  if (sbReady) {
+    document.getElementById('ban-pending').style.display = 'flex';
+    clearTimeout(_autoSync);
+    _autoSync = setTimeout(doUpload, 3000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TIMER
+// ═══════════════════════════════════════════════════════════
+function toggleTimer() {
+  timerRun = !timerRun;
+  var btn = document.getElementById('tbtn');
+  var disp = document.getElementById('tdisp');
+  if (btn) btn.textContent = timerRun ? '⏸' : '▶';
+  if (disp) disp.classList.toggle('run', timerRun);
+  if (timerRun) {
+    timerInt = setInterval(function() { timerSec++; updateTimerDisplay(); }, 1000);
+  } else {
+    clearInterval(timerInt);
+    if (timerSec > 0) toast('🎬 Sesión: ' + fmtTime(timerSec));
+  }
+}
+function resetTimer() {
+  timerRun = false; timerSec = 0;
+  clearInterval(timerInt);
+  var d = document.getElementById('tdisp');
+  var b = document.getElementById('tbtn');
+  if (d) { d.textContent = '00:00'; d.classList.remove('run'); }
+  if (b) b.textContent = '▶';
+}
+function fmtTime(s) {
+  return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+}
+function updateTimerDisplay() {
+  var el = document.getElementById('tdisp');
+  if (el) el.textContent = fmtTime(timerSec);
+}
+
+// ═══════════════════════════════════════════════════════════
+// READONLY
+// ═══════════════════════════════════════════════════════════
+function toggleRO() {
+  readonly = !readonly;
+  document.body.classList.toggle('readonly', readonly);
+  var btn = document.getElementById('ro-btn');
+  if (btn) btn.style.color = readonly ? 'var(--c3)' : '';
+  toast(readonly ? '👁 Modo lectura activado' : '✏ Edición activada');
+}
+
+// ═══════════════════════════════════════════════════════════
+// IMPORT / EXPORT
+// ═══════════════════════════════════════════════════════════
+function exportJSON() {
+  var data = {version:4, date:new Date().toISOString(), modules:modules, checked:checked, notes:notes};
+  var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url;
+  a.download = 'IngenIA_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('💾 JSON exportado');
+}
+
+function importJSON(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var d = JSON.parse(ev.target.result);
+      var dateStr = d.date ? new Date(d.date).toLocaleDateString('es-CO') : 'desconocida';
+      if (!confirm('¿Restaurar progreso del ' + dateStr + '?')) return;
+      if (d.modules) modules = d.modules;
+      if (d.checked) checked = d.checked;
+      if (d.notes != null) {
+        notes = d.notes;
+        var gn = document.getElementById('gn');
+        if (gn) gn.value = notes;
+      }
+      markChanged('📂 JSON importado');
+      render();
+      toast('📂 Importado correctamente');
+    } catch(err) {
+      toast('❌ Archivo inválido', true);
+      console.error('[IngenIA] importJSON error:', err);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════
+// SUPABASE CONFIG MODAL
+// ═══════════════════════════════════════════════════════════
+function openSbConfig() {
+  openModal(
+    '<h3>⚡ Configurar Supabase</h3>' +
+    '<p>Usa las mismas credenciales en todos los dispositivos. El estado de la conexión se muestra arriba.</p>' +
+    '<div class="mf"><label class="ml">Project URL</label>' +
+    '<input class="mi" id="sb-u" placeholder="https://xxx.supabase.co" value="' + escH(SB_URL) + '"></div>' +
+    '<div class="mf"><label class="ml">Anon Key</label>' +
+    '<input class="mi" id="sb-k" type="password" value="' + escH(SB_KEY) + '"></div>' +
+    '<div class="mf"><label class="ml">SQL — crea las tablas una sola vez</label>' +
+    '<div class="mc">create table if not exists ingenia_modules (\n  id text primary key, num text, color text,\n  title text, sub text, position int default 0,\n  updated_at timestamptz default now()\n);\ncreate table if not exists ingenia_classes (\n  id text primary key,\n  module_id text references ingenia_modules(id) on delete cascade,\n  num text, title text, description text,\n  duration text, status text default \'pendiente\',\n  checked boolean default false,\n  position int default 0,\n  updated_at timestamptz default now()\n);\ncreate table if not exists ingenia_meta (\n  key text primary key, value text,\n  updated_at timestamptz default now()\n);\nalter table ingenia_modules enable row level security;\nalter table ingenia_classes  enable row level security;\nalter table ingenia_meta     enable row level security;\ncreate policy "open" on ingenia_modules for all using(true) with check(true);\ncreate policy "open" on ingenia_classes  for all using(true) with check(true);\ncreate policy "open" on ingenia_meta     for all using(true) with check(true);\n-- Dashboard › Database › Replication: activa las 3 tablas</div></div>' +
+    '<div class="ma">' +
+    '<button class="btn btn-x" onclick="closeModal()">Cancelar</button>' +
+    '<button class="btn btn-b" onclick="sbConnectAndPull()">☁ Conectar y Cargar</button>' +
+    '<button class="btn btn-p" onclick="sbJustConnect()">🔌 Solo Conectar</button>' +
+    '</div>'
+  );
+}
+
+function sbSaveCreds() {
+  SB_URL = document.getElementById('sb-u').value.trim();
+  SB_KEY = document.getElementById('sb-k').value.trim();
+  localStorage.setItem('sb_url', SB_URL);
+  localStorage.setItem('sb_key', SB_KEY);
+  sbClient = null; sbReady = false; rtChan = null;
+}
+function sbConnectAndPull() { sbSaveCreds(); closeModal(); initSupabase(); }
+function sbJustConnect()    { sbSaveCreds(); closeModal(); initSupabase(); }
+
+// ═══════════════════════════════════════════════════════════
+// MODULE ACTIONS
+// ═══════════════════════════════════════════════════════════
+function openAddMod() {
+  if (readonly) return;
+  var sw = COLORS.map(function(c,i) {
+    return '<div class="cs' + (i===0?' sel':'') + '" style="background:' + c + '" data-color="' + c + '" onclick="pickColor(this)"></div>';
+  }).join('');
+  openModal(
+    '<h3>➕ Nuevo Módulo</h3>' +
+    '<div class="mf"><label class="ml">Número / ID</label><input class="mi" id="m-n" placeholder="4, Extra, Bonus…"></div>' +
+    '<div class="mf"><label class="ml">Título</label><input class="mi" id="m-t" placeholder="ej: Casos de Estudio"></div>' +
+    '<div class="mf"><label class="ml">Subtítulo</label><input class="mi" id="m-s" placeholder="ej: Requiere Nivel 4"></div>' +
+    '<div class="mf"><label class="ml">Color del badge</label><div class="cg">' + sw + '</div><input type="hidden" id="m-c" value="' + COLORS[0] + '"></div>' +
+    '<div class="ma"><button class="btn btn-x" onclick="closeModal()">Cancelar</button><button class="btn btn-p" onclick="confirmAddMod()">Crear módulo</button></div>'
+  );
+}
+function pickColor(el) {
+  document.querySelectorAll('.cs').forEach(function(s){s.classList.remove('sel');});
+  el.classList.add('sel');
+  document.getElementById('m-c').value = el.dataset.color;
+}
+function confirmAddMod() {
+  var num   = document.getElementById('m-n').value.trim();
+  var title = document.getElementById('m-t').value.trim();
+  if (!title) { toast('❌ Título requerido', true); return; }
+  var sub   = document.getElementById('m-s').value.trim();
+  var color = document.getElementById('m-c').value;
+  modules.push({id:'m_'+Date.now(), num:num||String(modules.length), color:color, title:title, sub:sub||'Nuevo módulo', classes:[]});
+  markChanged('➕ Módulo: ' + title);
+  render(); closeModal(); toast('✅ Módulo creado');
+}
+
+function deleteMod(id) {
+  if (readonly) return;
+  var m = modules.find(function(x){return x.id===id;});
+  if (!m) return;
+  openModal(
+    '<h3>🗑 Eliminar módulo</h3>' +
+    '<p>¿Eliminar <strong style="color:var(--white)">' + escH(m.title) + '</strong> y sus ' + m.classes.length + ' clases? No se puede deshacer.</p>' +
+    '<div class="ma"><button class="btn btn-x" onclick="closeModal()">Cancelar</button><button class="btn btn-r" onclick="confirmDelMod(\'' + escJ(id) + '\')">Sí, eliminar</button></div>'
+  );
+}
+function confirmDelMod(id) {
+  var m = modules.find(function(x){return x.id===id;});
+  var title = m ? m.title : id;
+  modules = modules.filter(function(x){return x.id!==id;});
+  markChanged('🗑 Módulo eliminado: ' + title);
+  render(); closeModal(); toast('🗑 Módulo eliminado');
+}
+
+function updateModTitle(id, val) {
+  var m = modules.find(function(x){return x.id===id;});
+  if (m && val.trim()) { m.title = val.trim(); markChanged('✏ Módulo: ' + val.trim()); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLASS ACTIONS
+// ═══════════════════════════════════════════════════════════
+function openAddCls(modId) {
+  if (readonly) return;
+  var moOpts = modules.map(function(m) {
+    return '<option value="' + escH(m.id) + '"' + (m.id===modId?' selected':'') + '>' + escH(m.num) + ' — ' + escH(m.title) + '</option>';
+  }).join('');
+  var stOpts = Object.keys(ST).map(function(k) {
+    return '<option value="' + k + '"' + (k==='pendiente'?' selected':'') + '>' + ST[k].label + '</option>';
+  }).join('');
+  openModal(
+    '<h3>➕ Nueva Clase</h3>' +
+    '<div class="mf"><label class="ml">Módulo destino</label><select class="ms" id="c-m">' + moOpts + '</select></div>' +
+    '<div class="mf"><label class="ml">Título</label><input class="mi" id="c-t" placeholder="ej: Intro a Kling AI 2.5"></div>' +
+    '<div class="mf"><label class="ml">Descripción</label><textarea class="mta" id="c-d" placeholder="Qué cubre esta clase..."></textarea></div>' +
+    '<div style="display:flex;gap:10px">' +
+    '<div class="mf" style="flex:1"><label class="ml">Duración</label><input class="mi" id="c-dr" placeholder="8 min"></div>' +
+    '<div class="mf" style="flex:1"><label class="ml">Estado</label><select class="ms" id="c-s">' + stOpts + '</select></div>' +
+    '</div>' +
+    '<div class="ma"><button class="btn btn-x" onclick="closeModal()">Cancelar</button><button class="btn btn-g" onclick="confirmAddCls()">Añadir clase</button></div>'
+  );
+}
+function confirmAddCls() {
+  var modId  = document.getElementById('c-m').value;
+  var title  = document.getElementById('c-t').value.trim();
+  if (!title) { toast('❌ Título requerido', true); return; }
+  var desc   = document.getElementById('c-d').value.trim();
+  var dur    = document.getElementById('c-dr').value.trim() || '— min';
+  var status = document.getElementById('c-s').value;
+  var m = modules.find(function(x){return x.id===modId;});
+  if (!m) return;
+  m.classes.push({id:modId+'_c'+Date.now(), num:'C'+(m.classes.length+1), title:title, desc:desc, dur:dur, status:status});
+  markChanged('➕ Clase: ' + title);
+  render(); closeModal(); toast('✅ Clase añadida');
+}
+
+function toggleQA(modId) {
+  if (readonly) return;
+  var el = document.getElementById('qa-' + modId);
+  if (!el) return;
+  el.classList.toggle('open');
+  if (el.classList.contains('open')) {
+    var inp = document.getElementById('qai-' + modId);
+    if (inp) inp.focus();
+  }
+}
+function commitQA(modId) {
+  var inp   = document.getElementById('qai-' + modId);
+  var title = inp ? inp.value.trim() : '';
+  if (!title) return;
+  var m = modules.find(function(x){return x.id===modId;});
+  if (!m) return;
+  var selEl  = document.getElementById('qas-' + modId);
+  var status = selEl ? selEl.value : 'pendiente';
+  m.classes.push({id:modId+'_c'+Date.now(), num:'C'+(m.classes.length+1), title:title, desc:'', dur:'— min', status:status});
+  markChanged('➕ Clase rápida: ' + title);
+  render(); toast('✅ ' + title);
+}
+
+function deleteCls(modId, clsId) {
+  if (readonly) return;
+  var m = modules.find(function(x){return x.id===modId;});
+  var cls = m ? m.classes.find(function(c){return c.id===clsId;}) : null;
+  if (!cls) return;
+  openModal(
+    '<h3>🗑 Eliminar clase</h3>' +
+    '<p>¿Eliminar <strong style="color:var(--white)">' + escH(cls.title) + '</strong>?</p>' +
+    '<div class="ma"><button class="btn btn-x" onclick="closeModal()">Cancelar</button><button class="btn btn-r" onclick="confirmDelCls(\'' + escJ(modId) + '\',\'' + escJ(clsId) + '\')">Sí, eliminar</button></div>'
+  );
+}
+function confirmDelCls(modId, clsId) {
+  var m = modules.find(function(x){return x.id===modId;});
+  if (!m) return;
+  var cls = m.classes.find(function(c){return c.id===clsId;});
+  var title = cls ? cls.title : clsId;
+  m.classes = m.classes.filter(function(c){return c.id!==clsId;});
+  delete checked[clsId];
+  markChanged('🗑 Clase: ' + title);
+  render(); closeModal(); toast('🗑 Eliminada');
+}
+
+function toggleCheck(clsId) {
+  if (readonly) return;
+  checked[clsId] = !checked[clsId];
+  var cls = null;
+  modules.forEach(function(m){ m.classes.forEach(function(c){ if(c.id===clsId) cls=c; }); });
+  markChanged(checked[clsId] ? '✅ Grabada: ' + (cls?cls.title:clsId) : '↩ Desmarcada: ' + (cls?cls.title:clsId));
+  render();
+  toast(checked[clsId] ? '✅ Grabada' : '↩ Desmarcada');
+}
+
+function updField(modId, clsId, field, val) {
+  if (readonly) return;
+  var m = modules.find(function(x){return x.id===modId;});
+  var cls = m ? m.classes.find(function(c){return c.id===clsId;}) : null;
+  if (!cls) return;
+  cls[field] = val;
+  if (field === 'status') markChanged('🔄 ' + cls.title + ': ' + val);
+  else markChanged(null);
+  if (field === 'status') render();
+}
+
+function moveCls(fromId, clsId, toId) {
+  if (readonly || fromId === toId) return;
+  var from = modules.find(function(m){return m.id===fromId;});
+  var to   = modules.find(function(m){return m.id===toId;});
+  if (!from || !to) return;
+  var cls = from.classes.find(function(c){return c.id===clsId;});
+  if (!cls) return;
+  from.classes = from.classes.filter(function(c){return c.id!==clsId;});
+  to.classes.push(cls);
+  markChanged('📦 ' + cls.title + ' → ' + to.title);
+  render(); toast('📦 Movida a ' + to.title);
+}
+
+function notesChanged() {
+  notes = document.getElementById('gn').value;
+  markChanged(null);
+}
+
+// ═══════════════════════════════════════════════════════════
+// DRAG & DROP
+// ═══════════════════════════════════════════════════════════
+function dStart(e, mId, cId) {
+  if (readonly) { e.preventDefault(); return; }
+  dragData = {mId:mId, cId:cId};
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', cId);
+  setTimeout(function(){ var el=document.getElementById('row-'+cId); if(el) el.classList.add('dragging'); }, 0);
+}
+function dEnd(e, cId) {
+  document.querySelectorAll('.cls-row').forEach(function(r){r.classList.remove('dragging','dot','dob');});
+  document.querySelectorAll('.module').forEach(function(m){m.classList.remove('dov');});
+  dragData = null;
+}
+function dOver(e, mId, cId) {
+  if (!dragData) return; e.preventDefault();
+  document.querySelectorAll('.cls-row').forEach(function(r){r.classList.remove('dot','dob');});
+  var rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.classList.add(e.clientY < rect.top + rect.height/2 ? 'dot' : 'dob');
+}
+function dDrop(e, toMId, tId) {
+  e.preventDefault();
+  if (!dragData) return;
+  document.querySelectorAll('.cls-row').forEach(function(r){r.classList.remove('dot','dob');});
+  var fromMId = dragData.mId, cId = dragData.cId;
+  if (cId === tId) return;
+  var from = modules.find(function(m){return m.id===fromMId;});
+  var to   = modules.find(function(m){return m.id===toMId;});
+  if (!from || !to) return;
+  var cls  = from.classes.find(function(c){return c.id===cId;});
+  if (!cls) return;
+  from.classes = from.classes.filter(function(c){return c.id!==cId;});
+  var ti   = to.classes.findIndex(function(c){return c.id===tId;});
+  var rect = document.getElementById('row-'+tId) ? document.getElementById('row-'+tId).getBoundingClientRect() : null;
+  var after = rect && e.clientY > rect.top + rect.height/2;
+  to.classes.splice(after ? ti+1 : ti, 0, cls);
+  markChanged('↕ ' + cls.title + ' reordenada');
+  render();
+  toast(fromMId === toMId ? '↕ Reordenada' : '📦 Movida');
+}
+function mdOver(e, mId) {
+  if (!dragData) return; e.preventDefault();
+  document.querySelectorAll('.module').forEach(function(m){m.classList.remove('dov');});
+  var el = document.getElementById('mod-'+mId); if(el) el.classList.add('dov');
+}
+function mdDrop(e, toMId) {
+  e.preventDefault();
+  document.querySelectorAll('.module').forEach(function(m){m.classList.remove('dov');});
+  if (!dragData || dragData.mId === toMId) return;
+  moveCls(dragData.mId, dragData.cId, toMId);
+}
+
+// ═══════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════
+function toggleCollapse(id) { collapsed[id] = !collapsed[id]; render(); }
+function setFlt(f, btn) {
+  flt = f;
+  document.querySelectorAll('.fb').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  render();
+}
+function openModal(html) {
+  document.getElementById('mbox').innerHTML = html;
+  document.getElementById('modal').style.display = 'flex';
+  setTimeout(function(){
+    var f = document.querySelector('#mbox input:not([type=hidden]),#mbox textarea');
+    if (f) f.focus();
+  }, 50);
+}
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+var _toastT;
+function toast(msg, err, warn) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (err ? ' err' : warn ? ' warn' : '');
+  clearTimeout(_toastT);
+  _toastT = setTimeout(function(){ el.classList.remove('show'); }, 2800);
+}
+
+// Safe escaping — HTML entities AND JS string safety
+function escH(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;')
+    .replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+// For use inside JS string in onclick attributes (escape single quotes)
+function escJ(s) {
+  return String(s == null ? '' : s).replace(/'/g,"\\'").replace(/\\/g,'\\\\');
+}
+
+// ═══════════════════════════════════════════════════════════
+// STATS + TOTAL TIME
+// ═══════════════════════════════════════════════════════════
+function parseMins(dur) {
+  if (!dur) return 0;
+  var m = String(dur).match(/(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) : 0;
+}
+function updateStats() {
+  var total=0, done=0, urg=0, pend=0, star=0, mins=0;
+  modules.forEach(function(m) {
+    m.classes.forEach(function(c) {
+      total++;
+      mins += parseMins(c.dur);
+      if (checked[c.id]) done++;
+      if (c.status === 'urgente') urg++;
+      if (c.status === 'pendiente' || c.status === 'urgente') pend++;
+      if (c.status === 'estrella') star++;
+    });
+  });
+  var pct = total ? Math.round(done/total*100) : 0;
+  var gb = document.getElementById('gp-bar');
+  var gc = document.getElementById('gp-count');
+  if (gb) gb.style.width = pct + '%';
+  if (gc) gc.textContent = done + '/' + total;
+  var tt = document.getElementById('total-time');
+  if (tt) {
+    var h = Math.floor(mins/60), m2 = Math.round(mins%60);
+    tt.textContent = h ? (h + 'h ' + m2 + 'min') : (m2 + ' min');
+  }
+  document.getElementById('stats-row').innerHTML =
+    '<div class="stat"><div class="stat-icon" style="background:rgba(0,251,156,.1)">✅</div><div><div class="stat-num" style="color:var(--c1)">' + done + '</div><div class="stat-lbl">Grabadas</div></div></div>' +
+    '<div class="stat"><div class="stat-icon" style="background:rgba(255,255,255,.05)">📋</div><div><div class="stat-num" style="color:var(--white)">' + total + '</div><div class="stat-lbl">Total</div></div></div>' +
+    '<div class="stat"><div class="stat-icon" style="background:rgba(233,69,96,.1)">🔴</div><div><div class="stat-num" style="color:var(--red)">' + urg + '</div><div class="stat-lbl">Urgentes</div></div></div>' +
+    '<div class="stat"><div class="stat-icon" style="background:rgba(245,166,35,.1)">⏳</div><div><div class="stat-num" style="color:var(--gold)">' + pend + '</div><div class="stat-lbl">Pendientes</div></div></div>' +
+    '<div class="stat"><div class="stat-icon" style="background:rgba(245,166,35,.1)">⭐</div><div><div class="stat-num" style="color:var(--gold)">' + star + '</div><div class="stat-lbl">Estrellas</div></div></div>' +
+    '<div class="stat"><div class="stat-icon" style="background:rgba(101,100,233,.1)">📊</div><div><div class="stat-num" style="color:var(--c3)">' + pct + '%</div><div class="stat-lbl">Completado</div></div></div>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER — wrapped in try-catch so errors are visible
+// ═══════════════════════════════════════════════════════════
+function render() {
+  try {
+    var mc = document.getElementById('mc');
+    if (!mc) return;
+    var query = (document.getElementById('si-inp') ? document.getElementById('si-inp').value : '').toLowerCase().trim();
+    mc.innerHTML = '';
+
+    if (!modules || modules.length === 0) {
+      mc.innerHTML = '<div style="padding:30px 20px;text-align:center;color:var(--gray2);font-size:13px;">Sin módulos. Añade uno arriba o importa tu JSON.</div>';
+      updateStats();
+      return;
+    }
+
+    modules.forEach(function(mod) {
+      // Guard against malformed modules
+      if (!mod || !mod.id) return;
+      if (!mod.classes) mod.classes = [];
+
+      var cls = mod.classes.slice();
+      if (flt !== 'all') cls = cls.filter(function(c){return c.status === flt;});
+      if (query) cls = cls.filter(function(c){
+        return (c.title||'').toLowerCase().indexOf(query) > -1 ||
+               (c.desc||'').toLowerCase().indexOf(query) > -1;
+      });
+
+      var tot = mod.classes.length;
+      var dn  = mod.classes.filter(function(c){return !!checked[c.id];}).length;
+      var pct = tot ? Math.round(dn/tot*100) : 0;
+      var isC = !!collapsed[mod.id];
+      var oth = modules.filter(function(m){return m.id !== mod.id;});
+
+      var el  = document.createElement('div');
+      el.className = 'module' + (isC ? ' collapsed' : '');
+      el.id = 'mod-' + mod.id;
+      el.addEventListener('dragover', function(e){mdOver(e, mod.id);});
+      el.addEventListener('drop',     function(e){mdDrop(e, mod.id);});
+
+      el.innerHTML =
+        '<div class="mod-hdr" onclick="toggleCollapse(\'' + escJ(mod.id) + '\')">' +
+        '<span class="m-handle" onclick="event.stopPropagation()">⠿</span>' +
+        '<div class="mbadge" style="background:' + escH(mod.color||'#333') + '">' + escH(mod.num||'?') + '</div>' +
+        '<div class="minfo">' +
+        '<input class="m-title-i" value="' + escH(mod.title||'') + '" onclick="event.stopPropagation()" ' +
+        'onchange="updateModTitle(\'' + escJ(mod.id) + '\',this.value)" oninput="event.stopPropagation()">' +
+        '<div class="m-sub">' + escH(mod.sub||'') + '</div>' +
+        '</div>' +
+        '<div class="m-right">' +
+        '<div class="m-acts" onclick="event.stopPropagation()">' +
+        '<button class="m-act" onclick="openAddCls(\'' + escJ(mod.id) + '\')">＋ Clase</button>' +
+        '<button class="m-act" onclick="toggleQA(\'' + escJ(mod.id) + '\')" title="Añadir clase rápida">⚡</button>' +
+        '<button class="m-act del" onclick="deleteMod(\'' + escJ(mod.id) + '\')">🗑</button>' +
+        '</div>' +
+        '<div class="m-pb"><div class="m-pf" style="width:' + pct + '%;background:' + escH(mod.color||'#333') + '"></div></div>' +
+        '<span class="m-pt">' + dn + '/' + tot + '</span>' +
+        '<span class="chevron">▾</span>' +
+        '</div></div>';
+
+      var list = document.createElement('div');
+      list.className = 'cls-list';
+
+      if (cls.length === 0) {
+        var emp = document.createElement('div');
+        emp.className = 'empty';
+        emp.textContent = query ? 'Sin resultados.' : 'Sin clases con este filtro.';
+        list.appendChild(emp);
+      } else {
+        cls.forEach(function(c) {
+          if (!c || !c.id) return;
+          var isChk = !!checked[c.id];
+          var stObj = ST[c.status] || ST.pendiente;
+          var mvOpts = '';
+          if (oth.length && !readonly) {
+            mvOpts = '<select class="mv-s" onchange="moveCls(\'' + escJ(mod.id) + '\',\'' + escJ(c.id) + '\',this.value);this.value=\'\'" title="Mover a otro módulo">' +
+              '<option value="">↗ Mover...</option>' +
+              oth.map(function(m){
+                return '<option value="' + escH(m.id) + '">' + escH(m.num) + '—' + escH(m.title) + '</option>';
+              }).join('') +
+              '</select>';
+          }
+          var stOpts = Object.keys(ST).map(function(k){
+            return '<option value="' + k + '"' + (c.status===k?' selected':'') + '>' + ST[k].label + '</option>';
+          }).join('');
+
+          var row = document.createElement('div');
+          row.className = 'cls-row s-' + (c.status||'pendiente');
+          row.id = 'row-' + c.id;
+          row.setAttribute('draggable', 'true');
+          row.addEventListener('dragstart', function(e){dStart(e, mod.id, c.id);});
+          row.addEventListener('dragend',   function(e){dEnd(e, c.id);});
+          row.addEventListener('dragover',  function(e){dOver(e, mod.id, c.id);});
+          row.addEventListener('drop',      function(e){dDrop(e, mod.id, c.id);});
+
+          row.innerHTML =
+            '<span class="c-handle">⠿</span>' +
+            '<div class="c-chk' + (isChk?' checked':'') + '" onclick="toggleCheck(\'' + escJ(c.id) + '\')"></div>' +
+            '<div class="c-num">' + escH(c.num||'') + '</div>' +
+            '<div class="c-body">' +
+            '<div class="c-tr">' +
+            '<input class="c-ti" value="' + escH(c.title||'') + '" draggable="false" ' +
+            'onchange="updField(\'' + escJ(mod.id) + '\',\'' + escJ(c.id) + '\',\'title\',this.value)" onclick="event.stopPropagation()">' +
+            '<span class="badge ' + stObj.cls + '">' + stObj.label + '</span>' +
+            '</div>' +
+            '<textarea class="c-de" rows="2" draggable="false" ' +
+            'onchange="updField(\'' + escJ(mod.id) + '\',\'' + escJ(c.id) + '\',\'desc\',this.value)" ' +
+            'onclick="event.stopPropagation()">' + escH(c.desc||'') + '</textarea>' +
+            '</div>' +
+            '<div class="c-ctrl">' +
+            '<select class="st-s" onchange="updField(\'' + escJ(mod.id) + '\',\'' + escJ(c.id) + '\',\'status\',this.value)">' + stOpts + '</select>' +
+            '<input class="dur-i" value="' + escH(c.dur||'') + '" title="Duración" draggable="false" ' +
+            'onchange="updField(\'' + escJ(mod.id) + '\',\'' + escJ(c.id) + '\',\'dur\',this.value)">' +
+            mvOpts +
+            '<button class="c-del" onclick="deleteCls(\'' + escJ(mod.id) + '\',\'' + escJ(c.id) + '\')">🗑</button>' +
+            '</div>';
+
+          list.appendChild(row);
+        });
+      }
+
+      // Quick add
+      var stOptsList = Object.keys(ST).map(function(k){
+        return '<option value="' + k + '"' + (k==='pendiente'?' selected':'') + '>' + ST[k].label + '</option>';
+      }).join('');
+      var qa = document.createElement('div');
+      qa.className = 'quickadd';
+      qa.id = 'qa-' + mod.id;
+      qa.innerHTML =
+        '<input class="qa-i" id="qai-' + mod.id + '" placeholder="Título rápido... (Enter para añadir)" ' +
+        'onkeydown="if(event.key===\'Enter\')commitQA(\'' + escJ(mod.id) + '\')">' +
+        '<select class="qa-s" id="qas-' + mod.id + '">' + stOptsList + '</select>' +
+        '<button class="btn btn-g btn-sm" onclick="commitQA(\'' + escJ(mod.id) + '\')">Añadir</button>' +
+        '<button class="btn btn-x btn-sm" onclick="toggleQA(\'' + escJ(mod.id) + '\')">✕</button>';
+      list.appendChild(qa);
+
+      // Add class button
+      var ab = document.createElement('button');
+      ab.className = 'add-cls-btn';
+      ab.textContent = ' Añadir clase';
+      ab.onclick = function(){ openAddCls(mod.id); };
+      list.appendChild(ab);
+
+      el.appendChild(list);
+      mc.appendChild(el);
+    });
+
+    updateStats();
+  } catch(e) {
+    console.error('[IngenIA] render() error:', e);
+    showErr('Error al renderizar: ' + e.message + '. Revisa la consola (F12) para más detalles.');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
 // KEYBOARD SHORTCUTS
-// ═══════════════════════════════════════════════════════════════
-document.addEventListener('keydown',e=>{
-  if(e.key==='Escape') closeModal();
-  if((e.ctrlKey||e.metaKey)&&e.key==='s'){ e.preventDefault(); exportJSON(); }
-  if((e.ctrlKey||e.metaKey)&&e.key==='k'){ e.preventDefault(); const si=document.getElementById('si'); si?.focus(); si?.select(); }
-  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); if(sbOk) push(); else toast('⚠ Supabase no conectado',false,true); }
-  if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key==='ArrowUp'){ e.preventDefault(); manualPull(); }
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+  if ((e.ctrlKey||e.metaKey) && e.key === 's') { e.preventDefault(); exportJSON(); }
+  if ((e.ctrlKey||e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    var si = document.getElementById('si-inp');
+    if (si) { si.focus(); si.select(); }
+  }
+  if ((e.ctrlKey||e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    if (sbReady) doUpload();
+    else toast('⚠ Supabase no conectado', false, true);
+  }
+  if ((e.ctrlKey||e.metaKey) && e.shiftKey && e.key === 'ArrowUp') {
+    e.preventDefault();
+    doForcePull();
+  }
 });
 
-window.addEventListener('online', ()=>{ document.getElementById('ban-offline').style.display='none'; if(sbOk) push(); });
-window.addEventListener('offline',()=>{ document.getElementById('ban-offline').style.display='flex'; });
-window.addEventListener('beforeunload',e=>{ if(!sbOk){ e.preventDefault(); e.returnValue='Cambios sin exportar.'; } });
+window.addEventListener('online',  function(){ document.getElementById('ban-offline').style.display='none'; if(sbReady) doUpload(); });
+window.addEventListener('offline', function(){ document.getElementById('ban-offline').style.display='flex'; });
+window.addEventListener('beforeunload', function(e) {
+  if (!sbReady) { e.preventDefault(); e.returnValue = 'Cambios sin exportar.'; }
+});
 
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // INIT
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+console.log('[IngenIA] Starting v4.1...');
 loadLocal();
-document.getElementById('gn').value=notes;
+var gn = document.getElementById('gn');
+if (gn) gn.value = notes;
 renderHist();
-render();
-initSupabase(); // async: conecta → verifica → pull → subscribeRT
-if(!navigator.onLine) document.getElementById('ban-offline').style.display='flex';
+render(); // Renders immediately with local data — BEFORE Supabase async init
+console.log('[IngenIA] Initial render complete. Connecting to Supabase...');
+initSupabase(); // Async — connects, verifies, pulls, subscribes Realtime
+if (!navigator.onLine) document.getElementById('ban-offline').style.display = 'flex';
 </script>
 </body>
 </html>
