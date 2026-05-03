@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  IngenIA — Plan de Grabación  v4.1
+  IngenIA — Plan de Grabación  v4.2
   ══════════════════════════════════════════════════════════
   SQL SUPABASE — ejecuta en SQL Editor de tu proyecto:
 
@@ -288,18 +288,66 @@ body.readonly .add-mod-bar{display:none;}
 
 .empty{padding:12px 15px;font-size:11px;color:var(--gray2);font-style:italic;}
 
+/* ── LOGIN OVERLAY ── */
+.login-overlay{position:fixed;inset:0;background:var(--bg);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;}
+.login-box{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:36px 32px;max-width:380px;width:100%;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.7);}
+.login-logo{margin-bottom:20px;display:flex;justify-content:center;}
+.login-logo img{height:44px;width:auto;object-fit:contain;}
+.login-logo-fb{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--c3),var(--c2));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;margin:0 auto;}
+.login-title{font-size:22px;font-weight:700;color:var(--white);margin-bottom:6px;letter-spacing:-.5px;}
+.login-title span{background:linear-gradient(135deg,var(--c1),var(--c2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.login-sub{font-size:12px;color:var(--gray);margin-bottom:28px;line-height:1.5;}
+.login-field{margin-bottom:14px;text-align:left;}
+.login-label{display:block;font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;}
+.login-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;padding:11px 14px;outline:none;transition:border-color .2s;}
+.login-input:focus{border-color:var(--c2);}
+.login-btn{width:100%;padding:12px;border-radius:9px;background:linear-gradient(135deg,var(--c3),var(--c2));border:none;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px;transition:opacity .2s;letter-spacing:.2px;}
+.login-btn:hover{opacity:.88;}
+.login-btn:disabled{opacity:.5;cursor:default;}
+.login-err{font-size:12px;color:var(--red);margin-top:10px;min-height:18px;line-height:1.4;}
+.login-ver{font-size:10.5px;color:var(--gray2);margin-top:20px;line-height:1.5;}
+
+/* ── AUTH USER INDICATOR ── */
+.auth-user{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:10.5px;color:var(--gray);}
+.auth-dot{width:7px;height:7px;border-radius:50%;background:var(--c1);flex-shrink:0;}
+
 @media(max-width:560px){
   .topbar,.hero,.stats,.toolbar,.content{padding-left:14px;padding-right:14px;}
   .gp-bw{width:50px;}
   .htitle{font-size:22px;}
   .timer{display:none;}
   .mv-s{display:none;}
+  .login-box{padding:28px 20px;}
 }
 </style>
 </head>
 <body>
 
-<div class="topbar">
+<!-- ── LOGIN OVERLAY — shown if no active session ── -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <img src="logo.png" alt="IngenIA"
+        onerror="this.style.display='none';document.getElementById('login-logo-fb').style.display='flex'">
+      <div class="login-logo-fb" id="login-logo-fb" style="display:none">IA</div>
+    </div>
+    <div class="login-title">Ingen<span>IA</span></div>
+    <div class="login-sub">Plan de Grabación · Acceso privado<br>Solo tú puedes editar esto.</div>
+    <div class="login-field">
+      <label class="login-label">Email</label>
+      <input class="login-input" id="login-email" type="email" placeholder="tu@email.com"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Contraseña</label>
+      <input class="login-input" id="login-pass" type="password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-ver">🔒 Sesión protegida con Supabase Auth<br>Tu cuenta es la única con acceso de escritura.</div>
+  </div>
+</div>
   <div class="tl">
     <img src="logo.png" class="logo-img" alt="IngenIA"
       onerror="this.style.display='none';document.getElementById('lfb').style.display='flex'">
@@ -330,7 +378,11 @@ body.readonly .add-mod-bar{display:none;}
     <button class="btn btn-x btn-sm" id="ro-btn" onclick="toggleRO()" title="Modo lectura">👁</button>
     <button class="btn btn-x btn-sm" onclick="toggleHist()" title="Historial">📋</button>
     <button class="btn btn-x btn-sm" onclick="doForcePull()" title="Forzar carga desde Supabase">🔄</button>
-  </div>
+    <div class="auth-user" id="auth-user" style="display:none">
+      <div class="auth-dot"></div>
+      <span id="auth-email-lbl">—</span>
+      <button onclick="doLogout()" style="background:none;border:none;color:var(--gray2);cursor:pointer;font-size:12px;padding:0 2px;line-height:1;" title="Cerrar sesión">✕</button>
+    </div>
 </div>
 
 <div class="ro-bar" id="ro-bar">
@@ -573,33 +625,105 @@ function toggleHist() { document.getElementById('hist-sec').classList.toggle('op
 function clearHist()  { histLog = []; saveLocal(); renderHist(); }
 
 // ═══════════════════════════════════════════════════════════
-// SUPABASE INIT — con conexión real verificada
+// AUTH — login / logout / session check
+// ═══════════════════════════════════════════════════════════
+async function doLogin() {
+  var email = (document.getElementById('login-email').value || '').trim();
+  var pass  = (document.getElementById('login-pass').value  || '');
+  var errEl = document.getElementById('login-err');
+  var btn   = document.getElementById('login-btn');
+  if (!email || !pass) { errEl.textContent = 'Completa email y contraseña.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  errEl.textContent = '';
+  try {
+    const { data, error } = await sbClient.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+    console.log('[IngenIA] Login OK:', data.user.email);
+    onAuthSuccess(data.user);
+  } catch(e) {
+    console.error('[IngenIA] Login error:', e.message);
+    errEl.textContent = e.message === 'Invalid login credentials'
+      ? 'Email o contraseña incorrectos.'
+      : e.message;
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+}
+
+async function doLogout() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  await sbClient.auth.signOut();
+  document.getElementById('auth-user').style.display = 'none';
+  document.getElementById('auth-email-lbl').textContent = '—';
+  document.getElementById('login-overlay').style.display = 'flex';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-btn').disabled = false;
+  document.getElementById('login-btn').textContent = 'Entrar';
+  // Switch to readonly while logged out
+  readonly = true;
+  document.body.classList.add('readonly');
+  toast('Sesión cerrada', false, true);
+}
+
+function onAuthSuccess(user) {
+  // Hide login, show app
+  document.getElementById('login-overlay').style.display = 'none';
+  var auEl  = document.getElementById('auth-user');
+  var emlEl = document.getElementById('auth-email-lbl');
+  if (auEl)  auEl.style.display  = 'flex';
+  if (emlEl) emlEl.textContent   = user.email.split('@')[0]; // show only username part
+  // Ensure editable
+  readonly = false;
+  document.body.classList.remove('readonly');
+  document.getElementById('ro-btn').style.color = '';
+  console.log('[IngenIA] Auth success, user:', user.email);
+}
+
+// ═══════════════════════════════════════════════════════════
+// SUPABASE INIT — with auth session check
 // ═══════════════════════════════════════════════════════════
 async function initSupabase() {
-  // Check if supabase library loaded
   if (typeof supabase === 'undefined' || typeof supabase.createClient !== 'function') {
-    showErr('La librería de Supabase no se cargó. Verifica tu conexión a internet.');
-    console.error('[IngenIA] supabase library not found on window');
+    showErr('La librería de Supabase no se cargó.');
+    console.error('[IngenIA] supabase library not found');
     return;
   }
   if (!SB_URL || !SB_KEY) {
     setSS('local');
-    console.log('[IngenIA] No Supabase credentials — running in local mode');
+    document.getElementById('login-overlay').style.display = 'none'; // no auth in local mode
     return;
   }
   console.log('[IngenIA] Connecting to Supabase:', SB_URL.slice(0, 40) + '...');
   try {
     sbClient = supabase.createClient(SB_URL, SB_KEY);
 
-    // REAL connection test — this is the fix for the false-positive sbConnected bug
-    const { data: testData, error: testErr } = await sbClient
+    // Check for existing session FIRST
+    const { data: sessionData } = await sbClient.auth.getSession();
+    const existingSession = sessionData?.session;
+
+    if (existingSession) {
+      // Already logged in — proceed immediately
+      console.log('[IngenIA] Existing session found:', existingSession.user.email);
+      onAuthSuccess(existingSession.user);
+    } else {
+      // No session — show login, keep app in readonly with local data
+      console.log('[IngenIA] No session — showing login screen');
+      document.getElementById('login-overlay').style.display = 'flex';
+      readonly = true;
+      document.body.classList.add('readonly');
+      setSS('local');
+      render(); // render local data in readonly
+      return;   // don't proceed until after login
+    }
+
+    // Real connection test with the authenticated session
+    const { error: testErr } = await sbClient
       .from('ingenia_modules')
       .select('id')
       .limit(1);
 
-    if (testErr) {
-      throw new Error('Test query failed: ' + testErr.message);
-    }
+    if (testErr) throw new Error('Test query failed: ' + testErr.message);
 
     sbReady = true;
     setSS('synced');
@@ -608,11 +732,24 @@ async function initSupabase() {
     hideErr();
     console.log('[IngenIA] Supabase connected. Pulling data...');
 
-    // Pull on startup
     await doPull();
-
-    // Subscribe realtime
     subscribeRealtime();
+
+    // Listen for auth state changes (logout from another tab etc.)
+    sbClient.auth.onAuthStateChange(function(event, session) {
+      console.log('[IngenIA] Auth state change:', event);
+      if (event === 'SIGNED_OUT') {
+        sbReady = false;
+        setSS('local');
+        document.getElementById('auth-user').style.display = 'none';
+        document.getElementById('login-overlay').style.display = 'flex';
+        readonly = true;
+        document.body.classList.add('readonly');
+      } else if (event === 'SIGNED_IN' && session) {
+        onAuthSuccess(session.user);
+        initSupabase(); // reinit after login
+      }
+    });
 
   } catch(e) {
     sbReady = false;
@@ -620,7 +757,6 @@ async function initSupabase() {
     document.getElementById('sbdot').classList.add('err');
     showErr(e.message);
     console.error('[IngenIA] Supabase init error:', e);
-    // Still render local data
     render();
   }
 }
@@ -1522,14 +1658,17 @@ window.addEventListener('beforeunload', function(e) {
 // ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
-console.log('[IngenIA] Starting v4.1...');
+console.log('[IngenIA] Starting v4.2...');
 loadLocal();
 var gn = document.getElementById('gn');
 if (gn) gn.value = notes;
 renderHist();
-render(); // Renders immediately with local data — BEFORE Supabase async init
-console.log('[IngenIA] Initial render complete. Connecting to Supabase...');
-initSupabase(); // Async — connects, verifies, pulls, subscribes Realtime
+// Show login overlay immediately — initSupabase will hide it if session exists
+document.getElementById('login-overlay').style.display = 'flex';
+// Render local data behind the overlay (it'll be visible after login)
+render();
+console.log('[IngenIA] Initial render complete. Checking auth...');
+initSupabase(); // async: creates client → checks session → shows/hides login → pulls → realtime
 if (!navigator.onLine) document.getElementById('ban-offline').style.display = 'flex';
 </script>
 </body>
